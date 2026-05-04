@@ -53,6 +53,7 @@ import WellnessArticlesList from "./pages/admin/WellnessArticlesList";
 import WellnessArticleEditor from "./pages/admin/WellnessArticleEditor";
 import Settings from "./pages/admin/Settings";
 import LanguagesManager from "./pages/admin/LanguagesManager";
+import Preloader from "./components/Preloader";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
+        <Preloader />
         <Toaster />
         <Sonner />
         <BrowserRouter>
