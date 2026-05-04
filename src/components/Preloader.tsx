@@ -136,8 +136,14 @@ const Preloader = () => {
 
           {/* Logo with pulse */}
           <img
-            src={cyberomLogo}
+            src={LOGO_SRC}
             alt="Cyberom"
+            width={80}
+            height={80}
+            decoding="sync"
+            loading="eager"
+            // @ts-ignore
+            fetchpriority="high"
             className="w-20 h-20 object-contain relative z-10"
             style={{ animation: "preloaderPulse 1.6s ease-in-out infinite" }}
           />
