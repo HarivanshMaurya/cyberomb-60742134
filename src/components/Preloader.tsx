@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import cyberomLogo from "@/assets/cyberom-logo.png";
+
+const LOGO_SRC = "/cyberom-logo.png";
 
 const SESSION_KEY = "cyberom_preloader_shown";
 const FAST_LOAD_THRESHOLD_MS = 400; // if page is ready within this, skip entirely
