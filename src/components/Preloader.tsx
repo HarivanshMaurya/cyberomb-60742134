@@ -2,24 +2,67 @@ import { useEffect, useState } from "react";
 import cyberomLogo from "@/assets/cyberom-logo.png";
 
 const SESSION_KEY = "cyberom_preloader_shown";
+const FAST_LOAD_THRESHOLD_MS = 400; // if page is ready within this, skip entirely
+const MIN_VISIBLE_MS = 600;          // minimum time to show preloader if shown
+const MAX_VISIBLE_MS = 1800;         // maximum time before forcing fade
+const FADE_DURATION_MS = 500;
 
 const Preloader = () => {
   const [visible, setVisible] = useState(() => {
     if (typeof window === "undefined") return false;
-    return !sessionStorage.getItem(SESSION_KEY);
+    if (sessionStorage.getItem(SESSION_KEY)) return false;
+    // If document is already loaded (cached/fast), don't show
+    if (document.readyState === "complete") return false;
+    return true;
   });
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    if (!visible) return;
-    const fadeTimer = setTimeout(() => setFadeOut(true), 1800);
-    const removeTimer = setTimeout(() => {
-      setVisible(false);
+    if (!visible) {
       sessionStorage.setItem(SESSION_KEY, "1");
-    }, 2400);
+      return;
+    }
+
+    const startTime = performance.now();
+    let fadeTimer: ReturnType<typeof setTimeout> | undefined;
+    let removeTimer: ReturnType<typeof setTimeout> | undefined;
+    let maxTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const finish = (delay = 0) => {
+      if (fadeTimer || removeTimer) return;
+      fadeTimer = setTimeout(() => setFadeOut(true), delay);
+      removeTimer = setTimeout(() => {
+        setVisible(false);
+        sessionStorage.setItem(SESSION_KEY, "1");
+      }, delay + FADE_DURATION_MS);
+    };
+
+    const handleReady = () => {
+      const elapsed = performance.now() - startTime;
+      if (elapsed < FAST_LOAD_THRESHOLD_MS) {
+        // Page loaded super fast — skip nearly instantly
+        finish(0);
+      } else {
+        // Ensure minimum visible time for smooth UX
+        const remaining = Math.max(0, MIN_VISIBLE_MS - elapsed);
+        finish(remaining);
+      }
+    };
+
+    if (document.readyState === "complete") {
+      handleReady();
+    } else {
+      window.addEventListener("load", handleReady, { once: true });
+    }
+
+    // Hard cap so it never sticks
+    maxTimer = setTimeout(() => finish(0), MAX_VISIBLE_MS);
+
     return () => {
-      clearTimeout(fadeTimer);
-      clearTimeout(removeTimer);
+      window.removeEventListener("load", handleReady);
+      if (fadeTimer) clearTimeout(fadeTimer);
+      if (removeTimer) clearTimeout(removeTimer);
+      if (maxTimer) clearTimeout(maxTimer);
     };
   }, [visible]);
 
@@ -27,7 +70,7 @@ const Preloader = () => {
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-background transition-opacity duration-700 ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-background transition-opacity duration-500 ${
         fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
       aria-hidden="true"
