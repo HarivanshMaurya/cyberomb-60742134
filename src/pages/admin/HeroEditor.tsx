@@ -5,7 +5,8 @@
  import { Label } from '@/components/ui/label';
  import { Textarea } from '@/components/ui/textarea';
  import { Button } from '@/components/ui/button';
- import { Loader2, Save, Eye } from 'lucide-react';
+import { Loader2, Save, Eye } from 'lucide-react';
+import HeroSection from '@/components/HeroSection';
  
  export default function HeroEditor() {
    const { data: hero, isLoading } = useHeroContent();
@@ -199,35 +200,32 @@
            </CardContent>
          </Card>
  
-         {/* Preview */}
-         <Card>
-           <CardHeader>
-             <CardTitle>Preview</CardTitle>
-             <CardDescription>How your hero section will look</CardDescription>
-           </CardHeader>
-           <CardContent>
-             <div className="rounded-lg overflow-hidden border border-border">
-               <div className="relative aspect-video bg-muted">
-                 {formData.background_image && (
-                   <img
-                     src={formData.background_image}
-                     alt="Hero preview"
-                     className="w-full h-full object-cover"
-                   />
-                 )}
-                 <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white p-4 text-center">
-                   <h2 className="text-xl md:text-2xl font-bold mb-2">{formData.title}</h2>
-                   <p className="text-sm text-white/80 mb-4 max-w-md line-clamp-2">
-                     {formData.subtitle}
-                   </p>
-                   <span className="px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm">
-                     {formData.button_text}
-                   </span>
-                 </div>
-               </div>
-             </div>
-           </CardContent>
-         </Card>
+          {/* Preview - exact same component as frontend */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Live Preview</CardTitle>
+              <CardDescription>
+                Exact same hero as your homepage. Save changes to see updates here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg overflow-hidden border border-border bg-background">
+                <div
+                  className="relative origin-top-left"
+                  style={{
+                    width: '1400px',
+                    height: '900px',
+                    transform: 'scale(0.32)',
+                    transformOrigin: 'top left',
+                    marginBottom: `calc(900px * -0.68)`,
+                    marginRight: `calc(1400px * -0.68)`,
+                  }}
+                >
+                  <HeroSection />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
        </div>
      </div>
    );
