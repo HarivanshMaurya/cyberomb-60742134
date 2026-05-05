@@ -9,9 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2, LogIn, UserPlus, KeyRound, ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle2, Sparkles, Shield, ArrowRight, User } from 'lucide-react';
-import { lovable } from '@/integrations/lovable/index';
 
 type ViewMode = 'signin' | 'signup' | 'forgot' | 'forgot-sent';
+type SocialProvider = 'google' | 'apple';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -86,41 +86,32 @@ export default function Login() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
 
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
+  const handleSocialSignIn = async (provider: SocialProvider, label: string) => {
+    const setProviderLoading = provider === 'google' ? setGoogleLoading : setAppleLoading;
+    setProviderLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: getPublicOrigin(),
+          queryParams: provider === 'google' ? { prompt: 'select_account' } : undefined,
+        },
       });
-      if (result.redirected) return;
-      if (result.error) {
-        console.error('Google sign in error:', result.error);
-        toast.error('Google sign in failed: ' + (result.error.message || 'Unknown error'));
+      if (error) {
+        console.error(`${label} sign in error:`, error);
+        toast.error(`${label} sign in failed: ` + (error.message || 'Unknown error'));
+        setProviderLoading(false);
       }
     } catch (err) {
-      console.error('Google sign in exception:', err);
-      toast.error('Google sign in failed. Please try again.');
+      console.error(`${label} sign in exception:`, err);
+      toast.error(`${label} sign in failed. Please try again.`);
+      setProviderLoading(false);
     }
-    setGoogleLoading(false);
   };
 
-  const handleAppleSignIn = async () => {
-    setAppleLoading(true);
-    try {
-      const result = await lovable.auth.signInWithOAuth("apple", {
-        redirect_uri: window.location.origin,
-      });
-      if (result.redirected) return;
-      if (result.error) {
-        console.error('Apple sign in error:', result.error);
-        toast.error('Apple sign in failed: ' + (result.error.message || 'Unknown error'));
-      }
-    } catch (err) {
-      console.error('Apple sign in exception:', err);
-      toast.error('Apple sign in failed. Please try again.');
-    }
-    setAppleLoading(false);
-  };
+  const handleGoogleSignIn = () => handleSocialSignIn('google', 'Google');
+
+  const handleAppleSignIn = () => handleSocialSignIn('apple', 'Apple');
 
   const passwordStrength = (() => {
     let score = 0;
