@@ -54,6 +54,7 @@ import WellnessArticleEditor from "./pages/admin/WellnessArticleEditor";
 import Settings from "./pages/admin/Settings";
 import LanguagesManager from "./pages/admin/LanguagesManager";
 import Preloader from "./components/Preloader";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Index />} />
