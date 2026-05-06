@@ -111,7 +111,7 @@ const HeroSection = () => {
           loop
           muted
           playsInline
-          preload="none"
+          preload="auto"
           poster="/og-default.png"
           className="absolute inset-0 w-full h-full object-cover"
           aria-hidden="true"
@@ -119,8 +119,8 @@ const HeroSection = () => {
           <source src="/videos/hero-bg.webm" type="video/webm" />
         </video>
 
-        {/* Overlay for text readability */}
-        <div className="absolute inset-0 bg-background/70 dark:bg-background/80" />
+        {/* Overlay for text readability — light enough so video shows through */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/30 to-background/60 dark:from-background/55 dark:via-background/40 dark:to-background/70" />
 
         {/* Gradient mesh */}
         <div
