@@ -345,3 +345,8 @@ All colors MUST be HSL.
     opacity: 0.6;
   }
 }
+
+@keyframes heroSpin {
+  from { transform: rotate(0deg) scale(1.2); }
+  to { transform: rotate(360deg) scale(1.2); }
+}

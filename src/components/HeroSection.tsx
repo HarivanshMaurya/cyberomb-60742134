@@ -103,61 +103,88 @@ const HeroSection = () => {
       className="relative min-h-screen overflow-hidden flex items-center"
       onMouseMove={handleMouseMove}
     >
-      {/* ─── Cinematic Background ─── */}
-      <div className="absolute inset-0 -z-10">
-        {/* Background Video */}
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          poster="/og-default.png"
-          className="absolute inset-0 w-full h-full object-cover"
-          aria-hidden="true"
-        >
-          <source src="/videos/hero-bg.webm" type="video/webm" />
-        </video>
-
-        {/* Overlay for text readability — light enough so video shows through */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/30 to-background/60 dark:from-background/55 dark:via-background/40 dark:to-background/70" />
-
-        {/* Gradient mesh */}
+      {/* ─── Cinematic Animated Background ─── */}
+      <div className="absolute inset-0 -z-10 bg-background">
+        {/* Animated conic gradient aurora */}
         <div
-          className="absolute w-[800px] h-[800px] rounded-full opacity-[0.06] blur-[120px] transition-transform duration-[2s]"
+          className="absolute inset-0 opacity-[0.55] dark:opacity-[0.45]"
           style={{
-            background: `radial-gradient(circle, hsl(var(--accent)), transparent 70%)`,
+            background: `conic-gradient(from 0deg at 50% 50%, hsl(var(--accent)/0.18), hsl(var(--primary)/0.14), hsl(var(--secondary)/0.16), hsl(var(--accent)/0.18))`,
+            animation: 'heroSpin 30s linear infinite',
+            filter: 'blur(80px)',
+          }}
+        />
+
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.07] dark:opacity-[0.12]"
+          style={{
+            backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px',
+            maskImage: 'radial-gradient(ellipse 80% 60% at 50% 50%, #000 30%, transparent 80%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 50%, #000 30%, transparent 80%)',
+          }}
+        />
+
+        {/* Mouse-tracking gradient orbs */}
+        <div
+          className="absolute w-[800px] h-[800px] rounded-full opacity-30 blur-[120px] transition-transform duration-[2s]"
+          style={{
+            background: `radial-gradient(circle, hsl(var(--accent)/0.6), transparent 70%)`,
             top: '-20%',
             right: '-10%',
-            transform: `translate(${mousePos.x * -0.3}px, ${mousePos.y * -0.3}px)`,
+            transform: `translate(${mousePos.x * -0.4}px, ${mousePos.y * -0.4}px)`,
           }}
         />
         <div
-          className="absolute w-[600px] h-[600px] rounded-full opacity-[0.04] blur-[100px] transition-transform duration-[2.5s]"
+          className="absolute w-[700px] h-[700px] rounded-full opacity-25 blur-[110px] transition-transform duration-[2.5s]"
           style={{
-            background: `radial-gradient(circle, hsl(var(--secondary)), transparent 70%)`,
-            bottom: '-15%',
-            left: '-5%',
-            transform: `translate(${mousePos.x * 0.2}px, ${mousePos.y * 0.2}px)`,
+            background: `radial-gradient(circle, hsl(var(--primary)/0.5), transparent 70%)`,
+            bottom: '-20%',
+            left: '-10%',
+            transform: `translate(${mousePos.x * 0.3}px, ${mousePos.y * 0.3}px)`,
           }}
         />
         <div
-          className="absolute w-[300px] h-[300px] rounded-full opacity-[0.03] blur-[80px] transition-transform duration-[3s]"
+          className="absolute w-[400px] h-[400px] rounded-full opacity-20 blur-[90px] transition-transform duration-[3s]"
           style={{
-            background: `radial-gradient(circle, hsl(var(--primary)), transparent 70%)`,
-            top: '50%',
-            left: '40%',
-            transform: `translate(${mousePos.x * -0.15}px, ${mousePos.y * -0.15}px)`,
+            background: `radial-gradient(circle, hsl(var(--secondary)/0.6), transparent 70%)`,
+            top: '40%',
+            left: '45%',
+            transform: `translate(${mousePos.x * -0.2}px, ${mousePos.y * -0.2}px)`,
           }}
         />
 
-        {/* Noise texture overlay */}
-        <div className="absolute inset-0 opacity-[0.025]" style={{
+        {/* Floating particles */}
+        {[
+          { s: 6, t: '15%', l: '12%', d: '0s', dur: '14s' },
+          { s: 4, t: '25%', l: '82%', d: '2s', dur: '18s' },
+          { s: 8, t: '60%', l: '20%', d: '4s', dur: '16s' },
+          { s: 3, t: '75%', l: '70%', d: '1s', dur: '20s' },
+          { s: 5, t: '45%', l: '90%', d: '3s', dur: '22s' },
+          { s: 4, t: '85%', l: '45%', d: '5s', dur: '17s' },
+        ].map((p, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-accent/40"
+            style={{
+              width: p.s, height: p.s, top: p.t, left: p.l,
+              boxShadow: `0 0 ${p.s * 3}px hsl(var(--accent)/0.5)`,
+              animation: `pageFloat ${p.dur} ease-in-out ${p.d} infinite`,
+            }}
+          />
+        ))}
+
+        {/* Soft top vignette so text stays readable */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/60" />
+
+        {/* Noise texture */}
+        <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
         }} />
 
         {/* Subtle horizontal line */}
-        <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border/20 to-transparent" />
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
       </div>
 
       {/* ─── Main Content ─── */}
