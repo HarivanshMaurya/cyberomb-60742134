@@ -136,7 +136,7 @@ All colors MUST be HSL.
 
 @layer utilities {
   .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)));
+    background: linear-gradient(180deg, hsl(var(--foreground)), hsl(var(--foreground) / 0.55));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
