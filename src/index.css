@@ -8,38 +8,38 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Modern hi-tech palette — crisp neutrals + electric violet/cyan */
-    --background: 220 25% 98%;
-    --foreground: 222 47% 8%;
+    /* Apple-inspired: pure neutrals + signature blue */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 7%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 8%;
+    --card-foreground: 0 0% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 8%;
+    --popover-foreground: 0 0% 7%;
 
-    --primary: 222 47% 11%;
-    --primary-foreground: 220 25% 98%;
+    --primary: 0 0% 7%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 94%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 7%;
 
-    --muted: 220 15% 95%;
-    --muted-foreground: 220 10% 42%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 258 90% 60%;
-    --accent-foreground: 220 25% 98%;
+    --accent: 211 100% 45%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 220 25% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 258 90% 60%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 211 100% 45%;
 
-    --radius: 1rem;
+    --radius: 1.25rem;
 
-    /* Custom design tokens */
+    /* Tag tokens */
     --tag-financing: 210 80% 70%;
     --tag-lifestyle: 160 60% 60%;
     --tag-community: 25 90% 65%;
@@ -48,47 +48,46 @@ All colors MUST be HSL.
     --tag-creativity: 330 80% 70%;
     --tag-growth: 50 90% 65%;
 
-    /* Polish design tokens */
-    --cream: 220 20% 96%;
-    --cream-foreground: 222 47% 11%;
+    /* Polish tokens */
+    --cream: 0 0% 96%;
+    --cream-foreground: 0 0% 7%;
     --surface-elevated: 0 0% 100%;
-    --shadow-soft: 222 47% 11%;
-    --gradient-hero: linear-gradient(135deg, hsl(258 90% 60%), hsl(195 90% 55%));
-    --gradient-text: linear-gradient(135deg, hsl(258 90% 55%), hsl(220 90% 50%));
-    --glow-accent: 0 0 60px hsl(258 90% 60% / 0.35);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-soft: 0 0% 0%;
+    --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 96%));
+    --gradient-text: linear-gradient(180deg, hsl(0 0% 7%), hsl(0 0% 35%));
+    --glow-accent: 0 0 60px hsl(211 100% 45% / 0.25);
+    --transition-smooth: all 0.4s cubic-bezier(0.42, 0, 0.58, 1);
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 220 20% 96%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 96%;
 
-    --card: 222 40% 9%;
-    --card-foreground: 220 20% 96%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 222 40% 9%;
-    --popover-foreground: 220 20% 96%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 220 20% 96%;
-    --primary-foreground: 222 47% 8%;
+    --primary: 0 0% 96%;
+    --primary-foreground: 0 0% 0%;
 
-    --secondary: 222 30% 14%;
-    --secondary-foreground: 220 20% 96%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 222 30% 13%;
-    --muted-foreground: 220 15% 65%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 195 100% 60%;
-    --accent-foreground: 222 47% 8%;
+    --accent: 211 100% 55%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 70% 55%;
-    --destructive-foreground: 220 20% 96%;
+    --destructive-foreground: 0 0% 96%;
 
-    --border: 222 30% 16%;
-    --input: 222 30% 16%;
-    --ring: 195 100% 60%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 211 100% 55%;
 
-    /* Dark mode tag colors */
     --tag-financing: 210 40% 45%;
     --tag-lifestyle: 140 20% 40%;
     --tag-community: 25 30% 40%;
@@ -97,10 +96,9 @@ All colors MUST be HSL.
     --tag-creativity: 330 35% 45%;
     --tag-growth: 50 40% 45%;
 
-    /* Dark mode polish tokens */
-    --cream: 40 20% 25%;
-    --cream-foreground: 36 44% 96%;
-    --surface-elevated: 0 0% 16%;
+    --cream: 0 0% 12%;
+    --cream-foreground: 0 0% 96%;
+    --surface-elevated: 0 0% 10%;
     --shadow-soft: 0 0% 0%;
   }
 }
@@ -119,14 +117,26 @@ All colors MUST be HSL.
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-serif tracking-tight;
-    font-feature-settings: "ss01", "ss02", "cv11";
+    @apply font-display tracking-[-0.025em];
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+}
+
+@layer utilities {
+  .apple-headline {
+    @apply font-display font-semibold tracking-[-0.04em];
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+  }
+  .apple-eyebrow {
+    @apply text-accent text-base md:text-lg font-semibold tracking-tight;
   }
 }
 
 @layer utilities {
   .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)));
+    background: linear-gradient(180deg, hsl(var(--foreground)), hsl(var(--foreground) / 0.55));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

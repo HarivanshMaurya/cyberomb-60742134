@@ -72,31 +72,25 @@ const Travel = () => {
       <Header />
 
       <main>
-        {/* Hero Section */}
-        <section className="relative overflow-hidden py-20 md:py-28 lg:py-32">
-          <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-secondary/5" />
-          <div className="absolute top-20 left-20 w-80 h-80 bg-accent/8 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-10 w-64 h-64 bg-secondary/8 rounded-full blur-3xl" />
-          <FloatingIcons icons={[
-            { icon: BookOpen, top: '10%', left: '6%', size: 30, delay: '0s', duration: '16s', rotate: -10 },
-            { icon: ShoppingBag, top: '12%', left: '90%', size: 28, delay: '2s', duration: '19s', rotate: 12 },
-            { icon: Package, top: '62%', left: '5%', size: 24, delay: '1s', duration: '15s', rotate: -15 },
-            { icon: BookMarked, top: '58%', left: '92%', size: 26, delay: '3s', duration: '18s', rotate: 8 },
-            { icon: Gift, top: '30%', left: '94%', size: 22, delay: '4s', duration: '14s', rotate: -20 },
-          ]} />
+        {/* Hero Section — Apple-style minimal */}
+        <section className="relative overflow-hidden py-24 md:py-32 lg:py-40">
+          <div
+            className="absolute inset-0 -z-10"
+            style={{
+              background:
+                "radial-gradient(ellipse 70% 50% at 50% 0%, hsl(var(--accent) / 0.06), transparent 70%)",
+            }}
+          />
 
           <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border/60 mb-8 animate-slide-down">
-              <Store className="w-3.5 h-3.5 text-accent" />
-              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Shop</span>
-            </div>
+            <p className="apple-eyebrow mb-3 animate-slide-down">Shop</p>
 
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 animate-slide-down font-serif">
+            <h1 className="apple-headline text-5xl md:text-7xl lg:text-[88px] mb-6 animate-slide-down text-foreground">
               {pageData?.title || "Shop"}
             </h1>
 
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto animate-slide-up stagger-1">
-              {pageData?.subtitle || "Explore our curated collection of books, guides, and resources to fuel your journey."}
+            <p className="text-xl md:text-2xl text-muted-foreground font-medium tracking-[-0.015em] leading-snug max-w-2xl mx-auto animate-slide-up stagger-1">
+              {pageData?.subtitle || "A curated collection of books, guides, and resources to fuel your journey."}
             </p>
           </div>
         </section>
