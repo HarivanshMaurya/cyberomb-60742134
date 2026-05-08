@@ -149,17 +149,23 @@ const Index = () => {
           </div>
         </section>
 
-        <section className="my-20 rounded-[2.5rem] bg-card p-12 md:p-16 text-center animate-scale-in" aria-label="Newsletter">
-          <div className="max-w-2xl mx-auto space-y-8">
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-              {newsletterContent?.heading || 'Stay inspired.'}
+        <section className="my-20 relative rounded-[2.5rem] overflow-hidden p-12 md:p-16 text-center animate-scale-in border border-accent/20" aria-label="Newsletter">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-accent/10 via-card to-primary/5" />
+          <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-accent/20 blur-3xl -z-10" />
+          <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-primary/10 blur-3xl -z-10" />
+          <div className="max-w-2xl mx-auto space-y-8 relative">
+            <span className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.3em] text-accent">
+              <span className="w-6 h-px bg-accent" /> Newsletter
+            </span>
+            <h2 className="text-4xl md:text-6xl font-bold tracking-tight">
+              {newsletterContent?.heading || (<>Stay <span className="text-gradient">inspired.</span></>)}
             </h2>
             <p className="text-xl text-muted-foreground leading-relaxed">
               {newsletterContent?.description || 'Subscribe to receive our latest articles and insights directly in your inbox.'}
             </p>
-            <form onSubmit={(e) => { e.preventDefault(); handleSubscribe(newsletterEmail, setNewsletterEmail, setIsSubscribing); }} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <input type="email" placeholder="Your email" aria-label="Email address for newsletter" value={newsletterEmail} onChange={e => setNewsletterEmail(e.target.value)} className="flex-1 px-6 py-4 rounded-full border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring transition-all" />
-              <button type="submit" disabled={isSubscribing} className="px-10 py-4 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 hover:scale-105 transition-all disabled:opacity-50">
+            <form onSubmit={(e) => { e.preventDefault(); handleSubscribe(newsletterEmail, setNewsletterEmail, setIsSubscribing); }} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <input type="email" placeholder="Your email" aria-label="Email address for newsletter" value={newsletterEmail} onChange={e => setNewsletterEmail(e.target.value)} className="flex-1 px-6 py-4 rounded-full border border-border bg-background/80 backdrop-blur focus:outline-none focus:ring-2 focus:ring-accent transition-all" />
+              <button type="submit" disabled={isSubscribing} className="px-10 py-4 rounded-full bg-accent text-accent-foreground font-semibold hover:scale-105 transition-all disabled:opacity-50 shadow-[0_10px_40px_-10px_hsl(var(--accent)/0.6)]">
                 {isSubscribing ? 'Subscribing...' : (newsletterContent?.button_text || 'Subscribe')}
               </button>
             </form>
