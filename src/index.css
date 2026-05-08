@@ -8,82 +8,85 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Warm, sophisticated palette inspired by the design */
-    --background: 36 44% 96%;
-    --foreground: 0 0% 18%;
+    /* Modern hi-tech palette — crisp neutrals + electric violet/cyan */
+    --background: 220 25% 98%;
+    --foreground: 222 47% 8%;
 
-    --card: 33 40% 94%;
-    --card-foreground: 0 0% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 8%;
 
-    --popover: 36 44% 96%;
-    --popover-foreground: 0 0% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 8%;
 
-    --primary: 0 0% 18%;
-    --primary-foreground: 36 44% 96%;
+    --primary: 222 47% 11%;
+    --primary-foreground: 220 25% 98%;
 
-    --secondary: 25 30% 70%;
-    --secondary-foreground: 0 0% 18%;
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 33 30% 88%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 42%;
 
-    --accent: 140 20% 50%;
-    --accent-foreground: 36 44% 96%;
+    --accent: 258 90% 60%;
+    --accent-foreground: 220 25% 98%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 36 44% 96%;
+    --destructive-foreground: 220 25% 98%;
 
-    --border: 33 25% 85%;
-    --input: 33 25% 85%;
-    --ring: 0 0% 18%;
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 258 90% 60%;
 
     --radius: 1rem;
 
     /* Custom design tokens */
-    --tag-financing: 210 50% 75%;
-    --tag-lifestyle: 140 20% 70%;
-    --tag-community: 25 35% 60%;
-    --tag-wellness: 280 30% 75%;
-    --tag-travel: 195 50% 70%;
-    --tag-creativity: 330 40% 75%;
-    --tag-growth: 50 45% 70%;
+    --tag-financing: 210 80% 70%;
+    --tag-lifestyle: 160 60% 60%;
+    --tag-community: 25 90% 65%;
+    --tag-wellness: 280 70% 75%;
+    --tag-travel: 195 85% 65%;
+    --tag-creativity: 330 80% 70%;
+    --tag-growth: 50 90% 65%;
 
     /* Polish design tokens */
-    --cream: 40 40% 90%;
-    --cream-foreground: 0 0% 18%;
-    --surface-elevated: 36 44% 98%;
-    --shadow-soft: 0 0% 0%;
+    --cream: 220 20% 96%;
+    --cream-foreground: 222 47% 11%;
+    --surface-elevated: 0 0% 100%;
+    --shadow-soft: 222 47% 11%;
+    --gradient-hero: linear-gradient(135deg, hsl(258 90% 60%), hsl(195 90% 55%));
+    --gradient-text: linear-gradient(135deg, hsl(258 90% 55%), hsl(220 90% 50%));
+    --glow-accent: 0 0 60px hsl(258 90% 60% / 0.35);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
-    --background: 0 0% 10%;
-    --foreground: 36 44% 96%;
+    --background: 222 47% 6%;
+    --foreground: 220 20% 96%;
 
-    --card: 0 0% 14%;
-    --card-foreground: 36 44% 96%;
+    --card: 222 40% 9%;
+    --card-foreground: 220 20% 96%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 36 44% 96%;
+    --popover: 222 40% 9%;
+    --popover-foreground: 220 20% 96%;
 
-    --primary: 36 44% 96%;
-    --primary-foreground: 0 0% 18%;
+    --primary: 220 20% 96%;
+    --primary-foreground: 222 47% 8%;
 
-    --secondary: 25 15% 30%;
-    --secondary-foreground: 36 44% 96%;
+    --secondary: 222 30% 14%;
+    --secondary-foreground: 220 20% 96%;
 
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 222 30% 13%;
+    --muted-foreground: 220 15% 65%;
 
-    --accent: 140 20% 45%;
-    --accent-foreground: 36 44% 96%;
+    --accent: 195 100% 60%;
+    --accent-foreground: 222 47% 8%;
 
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 36 44% 96%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 220 20% 96%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 36 44% 96%;
+    --border: 222 30% 16%;
+    --input: 222 30% 16%;
+    --ring: 195 100% 60%;
 
     /* Dark mode tag colors */
     --tag-financing: 210 40% 45%;
@@ -117,10 +120,26 @@ All colors MUST be HSL.
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif tracking-tight;
+    font-feature-settings: "ss01", "ss02", "cv11";
   }
 }
 
 @layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .glass {
+    @apply bg-card/60 backdrop-blur-xl border border-border/50;
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 60px -10px hsl(var(--accent) / 0.5);
+  }
+
   .card-hover {
     @apply transition-all duration-500 hover:scale-[1.02];
     box-shadow: 0 4px 20px -4px hsl(var(--shadow-soft) / 0.1);

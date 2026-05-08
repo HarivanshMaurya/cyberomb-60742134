@@ -88,8 +88,15 @@ const Index = () => {
 
         <section id="articles" className="py-12" aria-label="Featured Articles">
           <div className="flex items-center justify-between mb-12 animate-slide-up">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Featured Articles</h2>
-            <Link to="/articles" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors px-4 py-2 rounded-full hover:bg-muted/60">
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.3em] text-accent">
+                <span className="w-6 h-px bg-accent" /> 01 / Articles
+              </span>
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+                Featured <span className="text-gradient">Articles</span>
+              </h2>
+            </div>
+            <Link to="/articles" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors px-4 py-2 rounded-full border border-border/60 hover:border-accent/60">
               View all →
             </Link>
           </div>
@@ -106,13 +113,20 @@ const Index = () => {
         {/* eBooks Section */}
         <section className="py-12" aria-label="eBooks">
           <div className="flex items-center justify-between mb-12 animate-slide-up">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-primary" />
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.3em] text-accent">
+                <span className="w-6 h-px bg-accent" /> 02 / Library
+              </span>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent/20 to-primary/10 flex items-center justify-center border border-accent/20">
+                  <BookOpen className="w-5 h-5 text-accent" />
+                </div>
+                <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+                  <span className="text-gradient">eBooks</span>
+                </h2>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">eBooks</h2>
             </div>
-            <Link to="/travel" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors px-4 py-2 rounded-full hover:bg-muted/60">
+            <Link to="/travel" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors px-4 py-2 rounded-full border border-border/60 hover:border-accent/60">
               View all →
             </Link>
           </div>
@@ -135,17 +149,23 @@ const Index = () => {
           </div>
         </section>
 
-        <section className="my-20 rounded-[2.5rem] bg-card p-12 md:p-16 text-center animate-scale-in" aria-label="Newsletter">
-          <div className="max-w-2xl mx-auto space-y-8">
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-              {newsletterContent?.heading || 'Stay inspired.'}
+        <section className="my-20 relative rounded-[2.5rem] overflow-hidden p-12 md:p-16 text-center animate-scale-in border border-accent/20" aria-label="Newsletter">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-accent/10 via-card to-primary/5" />
+          <div className="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-accent/20 blur-3xl -z-10" />
+          <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-primary/10 blur-3xl -z-10" />
+          <div className="max-w-2xl mx-auto space-y-8 relative">
+            <span className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.3em] text-accent">
+              <span className="w-6 h-px bg-accent" /> Newsletter
+            </span>
+            <h2 className="text-4xl md:text-6xl font-bold tracking-tight">
+              {newsletterContent?.heading || (<>Stay <span className="text-gradient">inspired.</span></>)}
             </h2>
             <p className="text-xl text-muted-foreground leading-relaxed">
               {newsletterContent?.description || 'Subscribe to receive our latest articles and insights directly in your inbox.'}
             </p>
-            <form onSubmit={(e) => { e.preventDefault(); handleSubscribe(newsletterEmail, setNewsletterEmail, setIsSubscribing); }} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <input type="email" placeholder="Your email" aria-label="Email address for newsletter" value={newsletterEmail} onChange={e => setNewsletterEmail(e.target.value)} className="flex-1 px-6 py-4 rounded-full border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring transition-all" />
-              <button type="submit" disabled={isSubscribing} className="px-10 py-4 rounded-full bg-primary text-primary-foreground font-medium hover:bg-primary/90 hover:scale-105 transition-all disabled:opacity-50">
+            <form onSubmit={(e) => { e.preventDefault(); handleSubscribe(newsletterEmail, setNewsletterEmail, setIsSubscribing); }} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <input type="email" placeholder="Your email" aria-label="Email address for newsletter" value={newsletterEmail} onChange={e => setNewsletterEmail(e.target.value)} className="flex-1 px-6 py-4 rounded-full border border-border bg-background/80 backdrop-blur focus:outline-none focus:ring-2 focus:ring-accent transition-all" />
+              <button type="submit" disabled={isSubscribing} className="px-10 py-4 rounded-full bg-accent text-accent-foreground font-semibold hover:scale-105 transition-all disabled:opacity-50 shadow-[0_10px_40px_-10px_hsl(var(--accent)/0.6)]">
                 {isSubscribing ? 'Subscribing...' : (newsletterContent?.button_text || 'Subscribe')}
               </button>
             </form>
