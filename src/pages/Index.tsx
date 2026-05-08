@@ -88,8 +88,15 @@ const Index = () => {
 
         <section id="articles" className="py-12" aria-label="Featured Articles">
           <div className="flex items-center justify-between mb-12 animate-slide-up">
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Featured Articles</h2>
-            <Link to="/articles" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors px-4 py-2 rounded-full hover:bg-muted/60">
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.3em] text-accent">
+                <span className="w-6 h-px bg-accent" /> 01 / Articles
+              </span>
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+                Featured <span className="text-gradient">Articles</span>
+              </h2>
+            </div>
+            <Link to="/articles" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors px-4 py-2 rounded-full border border-border/60 hover:border-accent/60">
               View all →
             </Link>
           </div>
@@ -106,13 +113,20 @@ const Index = () => {
         {/* eBooks Section */}
         <section className="py-12" aria-label="eBooks">
           <div className="flex items-center justify-between mb-12 animate-slide-up">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-primary" />
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.3em] text-accent">
+                <span className="w-6 h-px bg-accent" /> 02 / Library
+              </span>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent/20 to-primary/10 flex items-center justify-center border border-accent/20">
+                  <BookOpen className="w-5 h-5 text-accent" />
+                </div>
+                <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+                  <span className="text-gradient">eBooks</span>
+                </h2>
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">eBooks</h2>
             </div>
-            <Link to="/travel" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors px-4 py-2 rounded-full hover:bg-muted/60">
+            <Link to="/travel" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors px-4 py-2 rounded-full border border-border/60 hover:border-accent/60">
               View all →
             </Link>
           </div>
