@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import Header from "@/components/Header";
 import ArticleCard from "@/components/ArticleCard";
 import HeroSection from "@/components/HeroSection";
@@ -10,28 +11,47 @@ import { useSiteSection } from "@/hooks/useSiteSections";
 import { useArticles } from "@/hooks/useArticles";
 import { useActiveProducts } from "@/hooks/useProducts";
 import { articles as staticArticles } from "@/data/articles";
-import { ArrowUpRight, BookOpen } from "lucide-react";
+import { ArrowUpRight, BookOpen, Loader2 } from "lucide-react";
 import PageBackground from "@/components/PageBackground";
 import { Link } from "react-router-dom";
 
+const PAGE_SIZE = 6;
+
 const Index = () => {
-  const { data: dbArticles } = useArticles('published');
+  const { data: dbArticles, isLoading: articlesLoading } = useArticles('published');
   const { data: newsletterSection } = useSiteSection('newsletter');
   const { data: footerSection } = useSiteSection('footer');
   const { data: products, isLoading: productsLoading } = useActiveProducts();
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const featuredArticles = dbArticles?.length
-    ? dbArticles.slice(0, 6).map((article) => ({
-        id: article.slug,
-        title: article.title,
-        excerpt: article.excerpt || '',
-        image: article.featured_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&q=80',
-        category: article.category,
-        author: article.author_name || 'Anonymous',
-        date: new Date(article.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-        readTime: article.read_time || '5 min read',
-      }))
-    : staticArticles.slice(0, 6);
+  const allArticles = useMemo(() => {
+    const source = dbArticles?.length
+      ? dbArticles.map((article) => ({
+          id: article.slug,
+          title: article.title,
+          excerpt: article.excerpt || '',
+          image: article.featured_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&q=80',
+          category: article.category,
+          author: article.author_name || 'Anonymous',
+          date: new Date(article.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          readTime: article.read_time || '5 min read',
+        }))
+      : staticArticles;
+    return source;
+  }, [dbArticles]);
+
+  const featuredArticles = allArticles.slice(0, visibleCount);
+  const hasMore = visibleCount < allArticles.length;
+
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    // Simulate async fetch — page slice happens locally; keep feedback for UX
+    setTimeout(() => {
+      setVisibleCount((c) => Math.min(c + PAGE_SIZE, allArticles.length));
+      setLoadingMore(false);
+    }, 350);
+  };
 
   const newsletterContent = newsletterSection?.content as { heading?: string; description?: string; button_text?: string } | null;
   const footerContent = footerSection?.content as { copyright?: string; brand_description?: string; newsletter_placeholder?: string } | null;
