@@ -49,7 +49,6 @@ const NewsletterForm = ({
       setSuccess(true);
       setEmail("");
       toast.success("Subscribed successfully 🎉");
-      setTimeout(() => setSuccess(false), 4000);
     } catch (err: any) {
       const msg = err?.message || "Something went wrong";
       setError(msg);
@@ -61,26 +60,40 @@ const NewsletterForm = ({
 
   if (variant === "compact") {
     return (
-      <form onSubmit={handleSubmit} className={cn("flex gap-2 max-w-xs", className)}>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={placeholder}
-          aria-label="Email address"
-          className="flex-1 px-4 py-2.5 rounded-full border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 transition-all"
-          disabled={loading}
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          aria-label="Subscribe"
-          className="px-4 py-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-50 inline-flex items-center justify-center"
+      <div className={cn("max-w-xs", className)}>
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={placeholder}
+            aria-label="Email address"
+            aria-invalid={!!error}
+            aria-describedby="newsletter-compact-status"
+            className={cn(
+              "flex-1 px-4 py-2.5 rounded-full border bg-background text-sm focus:outline-none focus:ring-2 transition-all",
+              error ? "border-destructive focus:ring-destructive/40" : "border-border focus:ring-accent/40"
+            )}
+            disabled={loading || success}
+          />
+          <button
+            type="submit"
+            disabled={loading || success}
+            aria-label={success ? "Subscribed" : "Subscribe"}
+            className="px-4 py-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-60 inline-flex items-center justify-center"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : success ? <Check className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
+          </button>
+        </form>
+        <p
+          id="newsletter-compact-status"
+          role="status"
+          aria-live="polite"
+          className={cn("mt-1.5 text-xs min-h-[1rem]", error ? "text-destructive" : "text-accent")}
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : success ? <Check className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
-        </button>
-        {error && <p className="sr-only">{error}</p>}
-      </form>
+          {error || (success ? "Subscribed — thanks!" : "")}
+        </p>
+      </div>
     );
   }
 
@@ -125,12 +138,17 @@ const NewsletterForm = ({
           )}
         </button>
       </form>
-      <div className="h-5 mt-2 text-sm text-center">
-        {error && <p className="text-destructive">{error}</p>}
-        {success && !error && (
-          <p className="text-accent">Thanks — check your inbox soon.</p>
+      <p
+        id="newsletter-status"
+        role="status"
+        aria-live="polite"
+        className={cn(
+          "h-5 mt-2 text-sm text-center",
+          error ? "text-destructive" : "text-accent"
         )}
-      </div>
+      >
+        {error || (success ? "Thanks — check your inbox soon." : "")}
+      </p>
     </div>
   );
 };
