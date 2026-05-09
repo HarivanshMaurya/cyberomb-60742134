@@ -100,12 +100,41 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredArticles.map((article, index) => (
-              <div key={article.id} className={`animate-slide-up stagger-${Math.min(index + 1, 6)}`}>
-                <ArticleCard {...article} size="small" />
-              </div>
-            ))}
+            {articlesLoading && !dbArticles
+              ? [...Array(6)].map((_, i) => (
+                  <div key={i} className="aspect-[4/3] rounded-[2rem] bg-muted animate-pulse" />
+                ))
+              : featuredArticles.map((article, index) => (
+                  <div key={article.id} className={`animate-slide-up stagger-${Math.min(index + 1, 6)}`}>
+                    <ArticleCard {...article} size="small" featured={index === 0} />
+                  </div>
+                ))}
           </div>
+
+          {hasMore && (
+            <div className="mt-12 flex justify-center">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                aria-label="Load more articles"
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-border bg-background hover:bg-muted/60 hover:border-accent/60 text-sm font-semibold transition-all disabled:opacity-60"
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading
+                  </>
+                ) : (
+                  <>
+                    Load more
+                    <span className="text-muted-foreground text-xs">
+                      ({allArticles.length - visibleCount} more)
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </section>
 
         {/* eBooks Section */}
