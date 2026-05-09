@@ -141,12 +141,7 @@ const Index = () => {
             <p className="text-xl text-muted-foreground leading-relaxed">
               {newsletterContent?.description || 'Subscribe to receive our latest articles and insights directly in your inbox.'}
             </p>
-            <form onSubmit={(e) => { e.preventDefault(); handleSubscribe(newsletterEmail, setNewsletterEmail, setIsSubscribing); }} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input type="email" placeholder="Your email" aria-label="Email address for newsletter" value={newsletterEmail} onChange={e => setNewsletterEmail(e.target.value)} className="flex-1 px-6 py-4 rounded-full border border-border bg-background/80 backdrop-blur focus:outline-none focus:ring-2 focus:ring-accent transition-all" />
-              <button type="submit" disabled={isSubscribing} className="px-10 py-4 rounded-full bg-accent text-accent-foreground font-semibold hover:scale-105 transition-all disabled:opacity-50 shadow-[0_10px_40px_-10px_hsl(var(--accent)/0.6)]">
-                {isSubscribing ? 'Subscribing...' : (newsletterContent?.button_text || 'Subscribe')}
-              </button>
-            </form>
+            <NewsletterForm buttonText={newsletterContent?.button_text || 'Subscribe'} />
           </div>
         </section>
       </main>
