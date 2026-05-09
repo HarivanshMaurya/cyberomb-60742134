@@ -110,6 +110,7 @@ const NewsletterForm = ({
           placeholder={placeholder}
           aria-label="Email address for newsletter"
           aria-invalid={!!error}
+          aria-describedby="newsletter-status"
           className={cn(
             "flex-1 px-6 py-4 rounded-full border bg-background/80 backdrop-blur focus:outline-none focus:ring-2 transition-all",
             error
