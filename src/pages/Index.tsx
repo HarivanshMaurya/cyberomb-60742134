@@ -1,4 +1,3 @@
-import { useState } from "react";
 import Header from "@/components/Header";
 import ArticleCard from "@/components/ArticleCard";
 import HeroSection from "@/components/HeroSection";
@@ -6,13 +5,12 @@ import IntroSection from "@/components/IntroSection";
 import SEOHead, { buildWebsiteJsonLd, buildOrganizationJsonLd, buildItemListJsonLd } from "@/components/SEOHead";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
+import NewsletterForm from "@/components/NewsletterForm";
 import { useSiteSection } from "@/hooks/useSiteSections";
 import { useArticles } from "@/hooks/useArticles";
 import { useActiveProducts } from "@/hooks/useProducts";
 import { articles as staticArticles } from "@/data/articles";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Mail, ArrowUpRight, BookOpen } from "lucide-react";
+import { ArrowUpRight, BookOpen } from "lucide-react";
 import PageBackground from "@/components/PageBackground";
 import { Link } from "react-router-dom";
 
@@ -21,26 +19,6 @@ const Index = () => {
   const { data: newsletterSection } = useSiteSection('newsletter');
   const { data: footerSection } = useSiteSection('footer');
   const { data: products, isLoading: productsLoading } = useActiveProducts();
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [footerEmail, setFooterEmail] = useState('');
-  const [isSubscribing, setIsSubscribing] = useState(false);
-  const [isFooterSubscribing, setIsFooterSubscribing] = useState(false);
-
-  const handleSubscribe = async (email: string, setEmail: (v: string) => void, setLoading: (v: boolean) => void) => {
-    if (!email.trim()) { toast.error('Please enter your email'); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast.error('Please enter a valid email'); return; }
-    setLoading(true);
-    try {
-      const { error } = await supabase.from('newsletter_subscribers').upsert({ email: email.trim(), categories: [] }, { onConflict: 'email' });
-      if (error) throw error;
-      toast.success('Subscribed successfully! 🎉');
-      setEmail('');
-    } catch (err: any) {
-      toast.error(err.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const featuredArticles = dbArticles?.length
     ? dbArticles.slice(0, 6).map((article) => ({
