@@ -34,10 +34,10 @@ export function useActiveAuthors() {
   return useQuery({
     queryKey: ['authors', 'active'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('authors')
+      // Public view excludes sensitive fields like email
+      const { data, error } = await (supabase as any)
+        .from('public_authors')
         .select('*')
-        .eq('is_active', true)
         .order('name');
       if (error) throw error;
       return data as Author[];
