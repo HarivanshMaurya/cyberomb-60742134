@@ -57,6 +57,28 @@ const Index = () => {
   const total = data?.pages[0]?.total ?? 0;
   const hasArticles = articles.length > 0;
 
+  // Announce loading + appended count for screen readers when paginating
+  const [loadMoreAnnouncement, setLoadMoreAnnouncement] = useState('');
+  const prevCountRef = useRef(articles.length);
+  const wasFetchingRef = useRef(false);
+  useEffect(() => {
+    if (isFetchingNextPage && !wasFetchingRef.current) {
+      setLoadMoreAnnouncement('Loading more articles…');
+    } else if (!isFetchingNextPage && wasFetchingRef.current) {
+      const added = articles.length - prevCountRef.current;
+      if (added > 0) {
+        setLoadMoreAnnouncement(`Loaded ${added} more article${added === 1 ? '' : 's'}. Showing ${articles.length} of ${total || articles.length}.`);
+      }
+    }
+    wasFetchingRef.current = isFetchingNextPage;
+    if (!isFetchingNextPage) prevCountRef.current = articles.length;
+  }, [isFetchingNextPage, articles.length, total]);
+
+  const handleLoadMore = () => {
+    prevCountRef.current = articles.length;
+    fetchNextPage();
+  };
+
   const newsletterContent = newsletterSection?.content as { heading?: string; description?: string; button_text?: string } | null;
   const footerContent = footerSection?.content as { copyright?: string; brand_description?: string; newsletter_placeholder?: string } | null;
 
