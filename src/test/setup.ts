@@ -18,3 +18,12 @@ Object.defineProperty(window, "matchMedia", {
 if (!(Element.prototype as any).scrollIntoView) {
   (Element.prototype as any).scrollIntoView = () => {};
 }
+
+// jsdom lacks ResizeObserver (used by cmdk)
+if (typeof (globalThis as any).ResizeObserver === "undefined") {
+  (globalThis as any).ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
