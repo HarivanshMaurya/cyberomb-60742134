@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import Header from "@/components/Header";
 import ArticleCard from "@/components/ArticleCard";
 import HeroSection from "@/components/HeroSection";
@@ -8,50 +8,44 @@ import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import NewsletterForm from "@/components/NewsletterForm";
 import { useSiteSection } from "@/hooks/useSiteSections";
-import { useArticles } from "@/hooks/useArticles";
+import { useArticlesPaginated, type ArticleSort } from "@/hooks/useArticlesPaginated";
 import { useActiveProducts } from "@/hooks/useProducts";
-import { articles as staticArticles } from "@/data/articles";
-import { ArrowUpRight, BookOpen, Loader2 } from "lucide-react";
+import { ArrowUpRight, BookOpen, Loader2, Sparkles, Clock, Inbox } from "lucide-react";
 import PageBackground from "@/components/PageBackground";
 import { Link } from "react-router-dom";
 
-const PAGE_SIZE = 6;
-
 const Index = () => {
-  const { data: dbArticles, isLoading: articlesLoading } = useArticles('published');
   const { data: newsletterSection } = useSiteSection('newsletter');
   const { data: footerSection } = useSiteSection('footer');
   const { data: products, isLoading: productsLoading } = useActiveProducts();
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [loadingMore, setLoadingMore] = useState(false);
 
-  const allArticles = useMemo(() => {
-    const source = dbArticles?.length
-      ? dbArticles.map((article) => ({
-          id: article.slug,
-          title: article.title,
-          excerpt: article.excerpt || '',
-          image: article.featured_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&q=80',
-          category: article.category,
-          author: article.author_name || 'Anonymous',
-          date: new Date(article.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-          readTime: article.read_time || '5 min read',
-        }))
-      : staticArticles;
-    return source;
-  }, [dbArticles]);
+  const [sort, setSort] = useState<ArticleSort>('featured');
+  const {
+    data,
+    isLoading: articlesLoading,
+    isError: articlesError,
+    error: articlesErrorObj,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useArticlesPaginated(sort);
 
-  const featuredArticles = allArticles.slice(0, visibleCount);
-  const hasMore = visibleCount < allArticles.length;
+  const articles = useMemo(
+    () => (data?.pages.flatMap((p) => p.items) || []).map((article) => ({
+      id: article.slug,
+      title: article.title,
+      excerpt: article.excerpt || '',
+      image: article.featured_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&q=80',
+      category: article.category,
+      author: article.author_name || 'Anonymous',
+      date: new Date(article.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      readTime: article.read_time || '5 min read',
+    })),
+    [data]
+  );
 
-  const handleLoadMore = () => {
-    setLoadingMore(true);
-    // Simulate async fetch — page slice happens locally; keep feedback for UX
-    setTimeout(() => {
-      setVisibleCount((c) => Math.min(c + PAGE_SIZE, allArticles.length));
-      setLoadingMore(false);
-    }, 350);
-  };
+  const total = data?.pages[0]?.total ?? 0;
+  const hasArticles = articles.length > 0;
 
   const newsletterContent = newsletterSection?.content as { heading?: string; description?: string; button_text?: string } | null;
   const footerContent = footerSection?.content as { copyright?: string; brand_description?: string; newsletter_placeholder?: string } | null;
@@ -65,10 +59,10 @@ const Index = () => {
         jsonLd={[
           buildWebsiteJsonLd(),
           buildOrganizationJsonLd(),
-          ...(featuredArticles.length > 0
+          ...(articles.length > 0
             ? [buildItemListJsonLd(
                 "Featured Articles",
-                featuredArticles.map((a, i) => ({
+                articles.slice(0, 10).map((a, i) => ({
                   name: a.title,
                   url: `/blog/${a.id}`,
                   image: a.image,
@@ -79,61 +73,151 @@ const Index = () => {
         ]}
       />
       <Header />
-      
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <HeroSection />
         <IntroSection />
 
-        <section id="articles" className="py-12" aria-label="Featured Articles">
-          <div className="flex items-center justify-between mb-12 animate-slide-up">
+        <section id="articles" className="py-12" aria-label="Featured Articles" aria-busy={articlesLoading}>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-12 animate-slide-up">
             <div className="space-y-2">
               <span className="inline-flex items-center gap-2 text-[11px] font-mono uppercase tracking-[0.3em] text-accent">
                 <span className="w-6 h-px bg-accent" /> 01 / Articles
               </span>
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
-                Featured <span className="text-gradient">Articles</span>
+                {sort === 'featured' ? <>Featured <span className="text-gradient">Articles</span></> : <>Latest <span className="text-gradient">Articles</span></>}
               </h2>
             </div>
-            <Link to="/articles" className="text-sm font-medium text-muted-foreground hover:text-accent transition-colors px-4 py-2 rounded-full border border-border/60 hover:border-accent/60">
-              View all →
-            </Link>
+
+            <div className="flex items-center gap-3">
+              {/* Sort toggle */}
+              <div
+                role="tablist"
+                aria-label="Sort articles"
+                className="inline-flex items-center p-1 rounded-full border border-border/60 bg-card/60 backdrop-blur-sm"
+              >
+                <button
+                  role="tab"
+                  aria-selected={sort === 'featured'}
+                  onClick={() => setSort('featured')}
+                  className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    sort === 'featured'
+                      ? 'bg-foreground text-background shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Featured
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={sort === 'latest'}
+                  onClick={() => setSort('latest')}
+                  className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    sort === 'latest'
+                      ? 'bg-foreground text-background shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  Latest
+                </button>
+              </div>
+
+              <Link to="/articles" className="hidden sm:inline-flex text-sm font-medium text-muted-foreground hover:text-accent transition-colors px-4 py-2 rounded-full border border-border/60 hover:border-accent/60">
+                View all →
+              </Link>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {articlesLoading && !dbArticles
-              ? [...Array(6)].map((_, i) => (
-                  <div key={i} className="aspect-[4/3] rounded-[2rem] bg-muted animate-pulse" />
-                ))
-              : featuredArticles.map((article, index) => (
-                  <div key={article.id} className={`animate-slide-up stagger-${Math.min(index + 1, 6)}`}>
-                    <ArticleCard {...article} size="small" featured={index === 0} />
+          {/* Loading state */}
+          {articlesLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" aria-live="polite" aria-busy="true">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="aspect-[4/3] rounded-[2rem] bg-muted animate-pulse" />
+              ))}
+              <span className="sr-only">Loading articles…</span>
+            </div>
+          )}
+
+          {/* Error state */}
+          {!articlesLoading && articlesError && (
+            <div
+              role="alert"
+              className="rounded-[2rem] border border-destructive/30 bg-destructive/5 p-10 text-center"
+            >
+              <p className="text-base font-semibold text-destructive">Couldn't load articles</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {(articlesErrorObj as Error)?.message || 'Please try again in a moment.'}
+              </p>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!articlesLoading && !articlesError && !hasArticles && (
+            <div
+              role="status"
+              className="rounded-[2rem] border border-dashed border-border bg-card/40 p-12 text-center flex flex-col items-center gap-4"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center">
+                <Inbox className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg font-semibold">No articles published yet</p>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Check back soon — new stories are on the way.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Articles grid */}
+          {!articlesLoading && hasArticles && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {articles.map((article, index) => (
+                  <div key={article.id} className={`animate-slide-up stagger-${Math.min((index % 6) + 1, 6)}`}>
+                    <ArticleCard {...article} size="small" featured={sort === 'featured' && index === 0} />
                   </div>
                 ))}
-          </div>
+              </div>
 
-          {hasMore && (
-            <div className="mt-12 flex justify-center">
-              <button
-                onClick={handleLoadMore}
-                disabled={loadingMore}
-                aria-label="Load more articles"
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-border bg-background hover:bg-muted/60 hover:border-accent/60 text-sm font-semibold transition-all disabled:opacity-60"
-              >
-                {loadingMore ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading
-                  </>
+              <div className="mt-12 flex flex-col items-center gap-3" aria-live="polite">
+                {hasNextPage ? (
+                  <button
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    aria-label="Load more articles"
+                    className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-border bg-background hover:bg-muted/60 hover:border-accent/60 text-sm font-semibold transition-all disabled:opacity-60"
+                  >
+                    {isFetchingNextPage ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading…
+                      </>
+                    ) : (
+                      <>
+                        Load more
+                        {total > 0 && (
+                          <span className="text-muted-foreground text-xs">
+                            ({Math.max(total - articles.length, 0)} more)
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </button>
                 ) : (
-                  <>
-                    Load more
-                    <span className="text-muted-foreground text-xs">
-                      ({allArticles.length - visibleCount} more)
-                    </span>
-                  </>
+                  <p
+                    role="status"
+                    className="text-xs font-mono uppercase tracking-[0.3em] text-muted-foreground/70 inline-flex items-center gap-2"
+                  >
+                    <span className="w-6 h-px bg-border" />
+                    You've reached the end
+                    <span className="w-6 h-px bg-border" />
+                  </p>
                 )}
-              </button>
-            </div>
+              </div>
+            </>
           )}
         </section>
 

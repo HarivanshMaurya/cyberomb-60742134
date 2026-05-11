@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, FileText, BookOpen, Compass, X } from "lucide-react";
+import { FileText, BookOpen, Compass } from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -8,6 +8,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 import { useArticles } from "@/hooks/useArticles";
 import { useActiveProducts } from "@/hooks/useProducts";
@@ -46,7 +47,7 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search articles, eBooks, categories…" />
+      <CommandInput placeholder="Search articles, eBooks, categories…" autoFocus />
       <CommandList className="max-h-[60vh]">
         <CommandEmpty>No results found.</CommandEmpty>
 
@@ -66,38 +67,64 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
         )}
 
         {topArticles.length > 0 && (
-          <CommandGroup heading="Articles">
-            {topArticles.map((a) => (
-              <CommandItem
-                key={a.id}
-                value={`${a.title} ${a.category}`}
-                onSelect={() => go(`/blog/${a.slug}`)}
-              >
-                <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
-                <span className="truncate">{a.title}</span>
-                <span className="ml-auto text-xs text-muted-foreground capitalize">
-                  {a.category}
-                </span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          <>
+            <CommandSeparator />
+            <CommandGroup heading="Articles">
+              {topArticles.map((a) => (
+                <CommandItem
+                  key={a.id}
+                  value={`article ${a.title} ${a.category}`}
+                  onSelect={() => go(`/blog/${a.slug}`)}
+                >
+                  <FileText className="w-4 h-4 mr-2 text-muted-foreground" />
+                  <span className="truncate">{a.title}</span>
+                  <span className="ml-auto text-xs text-muted-foreground capitalize">
+                    {a.category}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
         )}
 
         {topProducts.length > 0 && (
-          <CommandGroup heading="eBooks">
-            {topProducts.map((p) => (
-              <CommandItem
-                key={p.id}
-                value={`ebook ${p.title}`}
-                onSelect={() => go(`/product/${p.slug}`)}
-              >
-                <BookOpen className="w-4 h-4 mr-2 text-muted-foreground" />
-                <span className="truncate">{p.title}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          <>
+            <CommandSeparator />
+            <CommandGroup heading="eBooks">
+              {topProducts.map((p) => (
+                <CommandItem
+                  key={p.id}
+                  value={`ebook ${p.title}`}
+                  onSelect={() => go(`/product/${p.slug}`)}
+                >
+                  <BookOpen className="w-4 h-4 mr-2 text-muted-foreground" />
+                  <span className="truncate">{p.title}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
         )}
       </CommandList>
+
+      {/* Keyboard hints — focus trap & Esc handled by Radix Dialog, arrows/enter by cmdk */}
+      <div className="flex items-center justify-between gap-2 border-t px-3 py-2 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono">↑</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono">↓</kbd>
+            navigate
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono">↵</kbd>
+            open
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono">esc</kbd>
+            close
+          </span>
+        </div>
+        <span className="hidden sm:inline">⌘K</span>
+      </div>
     </CommandDialog>
   );
 };
