@@ -176,12 +176,22 @@ const Index = () => {
           {!articlesLoading && articlesError && (
             <div
               role="alert"
-              className="rounded-[2rem] border border-destructive/30 bg-destructive/5 p-10 text-center"
+              className="rounded-[2rem] border border-destructive/30 bg-destructive/5 p-10 text-center flex flex-col items-center gap-4"
             >
-              <p className="text-base font-semibold text-destructive">Couldn't load articles</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                {(articlesErrorObj as Error)?.message || 'Please try again in a moment.'}
-              </p>
+              <div>
+                <p className="text-base font-semibold text-destructive">Couldn't load articles</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {(articlesErrorObj as Error)?.message || 'Please try again in a moment.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => refetchArticles()}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-destructive/40 bg-background hover:bg-destructive/10 text-sm font-semibold transition-all"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Retry
+              </button>
             </div>
           )}
 
