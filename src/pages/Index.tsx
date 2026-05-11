@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "@/components/Header";
 import ArticleCard from "@/components/ArticleCard";
 import HeroSection from "@/components/HeroSection";
@@ -10,9 +10,9 @@ import NewsletterForm from "@/components/NewsletterForm";
 import { useSiteSection } from "@/hooks/useSiteSections";
 import { useArticlesPaginated, type ArticleSort } from "@/hooks/useArticlesPaginated";
 import { useActiveProducts } from "@/hooks/useProducts";
-import { ArrowUpRight, BookOpen, Loader2, Sparkles, Clock, Inbox } from "lucide-react";
+import { ArrowUpRight, BookOpen, Loader2, Sparkles, Clock, Inbox, RefreshCw } from "lucide-react";
 import PageBackground from "@/components/PageBackground";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 const Index = () => {
   const { data: newsletterSection } = useSiteSection('newsletter');
