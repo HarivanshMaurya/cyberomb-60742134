@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, FileText, BookOpen, Compass, X } from "lucide-react";
+import { FileText, BookOpen, Compass } from "lucide-react";
 import {
   CommandDialog,
   CommandEmpty,
@@ -8,6 +8,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 import { useArticles } from "@/hooks/useArticles";
 import { useActiveProducts } from "@/hooks/useProducts";
