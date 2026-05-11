@@ -703,7 +703,45 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_authors: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          id: string | null
+          image: string | null
+          instagram: string | null
+          is_active: boolean | null
+          name: string | null
+          role: string | null
+          twitter: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          id?: string | null
+          image?: string | null
+          instagram?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          role?: string | null
+          twitter?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          id?: string | null
+          image?: string | null
+          instagram?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          role?: string | null
+          twitter?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
