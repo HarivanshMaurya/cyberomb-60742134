@@ -37,8 +37,34 @@ const Index = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetchNextPageError,
     refetch: refetchArticles,
   } = useArticlesPaginated(sort);
+
+  const errorRetryRef = useRef<HTMLButtonElement | null>(null);
+  const loadMoreRetryRef = useRef<HTMLButtonElement | null>(null);
+
+  // Auto-focus the retry button when an error appears so keyboard users can recover quickly
+  useEffect(() => {
+    if (articlesError && !articlesLoading) {
+      requestAnimationFrame(() => errorRetryRef.current?.focus());
+    }
+  }, [articlesError, articlesLoading]);
+
+  useEffect(() => {
+    if (isFetchNextPageError) {
+      requestAnimationFrame(() => loadMoreRetryRef.current?.focus());
+    }
+  }, [isFetchNextPageError]);
+
+  const friendlyError = (err: unknown): string => {
+    const msg = (err as Error)?.message || '';
+    if (!msg) return "Something went wrong while loading articles. Please check your connection and try again.";
+    if (/network|fetch|failed to fetch/i.test(msg)) return "Network issue — we couldn't reach the server. Check your connection and try again.";
+    if (/timeout/i.test(msg)) return "The request took too long. Please try again.";
+    if (/permission|denied|rls/i.test(msg)) return "You don't have permission to view these articles.";
+    return msg;
+  };
 
   const articles = useMemo(
     () => (data?.pages.flatMap((p) => p.items) || []).map((article) => ({
