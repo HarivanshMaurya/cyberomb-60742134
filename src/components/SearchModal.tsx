@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, BookOpen, Compass } from "lucide-react";
 import {
@@ -19,11 +19,57 @@ interface SearchModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type Group = "all" | "categories" | "articles" | "ebooks";
+
+const STORAGE_KEY = "cyberom:search-modal";
+
 const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
   const navigate = useNavigate();
   const { data: articles } = useArticles("published");
   const { data: products } = useActiveProducts();
   const { data: categories } = useCategories();
+
+  // Restore persisted query + group from localStorage
+  const persisted = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as {
+        query?: string;
+        group?: Group;
+      };
+    } catch {
+      return {};
+    }
+  })();
+
+  const [query, setQuery] = useState(persisted.query || "");
+  const [group, setGroup] = useState<Group>(persisted.group || "all");
+
+  // Persist on change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ query, group }));
+    } catch {
+      /* ignore */
+    }
+  }, [query, group]);
+
+  // Track previously focused element so we can restore focus on close
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (open) {
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+    } else if (previousFocusRef.current) {
+      // Defer to next tick so Radix completes its own focus management first
+      const el = previousFocusRef.current;
+      requestAnimationFrame(() => {
+        try {
+          el.focus({ preventScroll: true });
+        } catch {
+          /* ignore */
+        }
+      });
+    }
+  }, [open]);
 
   const go = (path: string) => {
     onOpenChange(false);
@@ -45,13 +91,49 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
   const topArticles = useMemo(() => (articles || []).slice(0, 8), [articles]);
   const topProducts = useMemo(() => (products || []).slice(0, 6), [products]);
 
+  const showCategories = group === "all" || group === "categories";
+  const showArticles = group === "all" || group === "articles";
+  const showEbooks = group === "all" || group === "ebooks";
+
+  const groups: { id: Group; label: string }[] = [
+    { id: "all", label: "All" },
+    { id: "categories", label: "Categories" },
+    { id: "articles", label: "Articles" },
+    { id: "ebooks", label: "eBooks" },
+  ];
+
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search articles, eBooks, categories…" autoFocus />
+      <CommandInput
+        placeholder="Search articles, eBooks, categories…"
+        autoFocus
+        value={query}
+        onValueChange={setQuery}
+      />
+
+      {/* Group filter chips */}
+      <div className="flex items-center gap-1.5 border-b px-3 py-2 overflow-x-auto">
+        {groups.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            onClick={() => setGroup(g.id)}
+            aria-pressed={group === g.id}
+            className={`text-xs font-medium px-3 py-1 rounded-full transition-colors ${
+              group === g.id
+                ? "bg-foreground text-background"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {g.label}
+          </button>
+        ))}
+      </div>
+
       <CommandList className="max-h-[60vh]">
         <CommandEmpty>No results found.</CommandEmpty>
 
-        {categories && categories.length > 0 && (
+        {showCategories && categories && categories.length > 0 && (
           <CommandGroup heading="Categories">
             {categories.map((c) => (
               <CommandItem
@@ -66,9 +148,9 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
           </CommandGroup>
         )}
 
-        {topArticles.length > 0 && (
+        {showArticles && topArticles.length > 0 && (
           <>
-            <CommandSeparator />
+            {showCategories && <CommandSeparator />}
             <CommandGroup heading="Articles">
               {topArticles.map((a) => (
                 <CommandItem
@@ -87,9 +169,9 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
           </>
         )}
 
-        {topProducts.length > 0 && (
+        {showEbooks && topProducts.length > 0 && (
           <>
-            <CommandSeparator />
+            {(showCategories || showArticles) && <CommandSeparator />}
             <CommandGroup heading="eBooks">
               {topProducts.map((p) => (
                 <CommandItem
@@ -106,7 +188,6 @@ const SearchModal = ({ open, onOpenChange }: SearchModalProps) => {
         )}
       </CommandList>
 
-      {/* Keyboard hints — focus trap & Esc handled by Radix Dialog, arrows/enter by cmdk */}
       <div className="flex items-center justify-between gap-2 border-t px-3 py-2 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1">
