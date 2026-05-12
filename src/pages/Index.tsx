@@ -37,8 +37,34 @@ const Index = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetchNextPageError,
     refetch: refetchArticles,
   } = useArticlesPaginated(sort);
+
+  const errorRetryRef = useRef<HTMLButtonElement | null>(null);
+  const loadMoreRetryRef = useRef<HTMLButtonElement | null>(null);
+
+  // Auto-focus the retry button when an error appears so keyboard users can recover quickly
+  useEffect(() => {
+    if (articlesError && !articlesLoading) {
+      requestAnimationFrame(() => errorRetryRef.current?.focus());
+    }
+  }, [articlesError, articlesLoading]);
+
+  useEffect(() => {
+    if (isFetchNextPageError) {
+      requestAnimationFrame(() => loadMoreRetryRef.current?.focus());
+    }
+  }, [isFetchNextPageError]);
+
+  const friendlyError = (err: unknown): string => {
+    const msg = (err as Error)?.message || '';
+    if (!msg) return "Something went wrong while loading articles. Please check your connection and try again.";
+    if (/network|fetch|failed to fetch/i.test(msg)) return "Network issue — we couldn't reach the server. Check your connection and try again.";
+    if (/timeout/i.test(msg)) return "The request took too long. Please try again.";
+    if (/permission|denied|rls/i.test(msg)) return "You don't have permission to view these articles.";
+    return msg;
+  };
 
   const articles = useMemo(
     () => (data?.pages.flatMap((p) => p.items) || []).map((article) => ({
@@ -176,18 +202,20 @@ const Index = () => {
           {!articlesLoading && articlesError && (
             <div
               role="alert"
+              aria-live="assertive"
               className="rounded-[2rem] border border-destructive/30 bg-destructive/5 p-10 text-center flex flex-col items-center gap-4"
             >
-              <div>
+              <div className="space-y-2">
                 <p className="text-base font-semibold text-destructive">Couldn't load articles</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {(articlesErrorObj as Error)?.message || 'Please try again in a moment.'}
+                <p className="text-sm text-muted-foreground max-w-md">
+                  {friendlyError(articlesErrorObj)}
                 </p>
               </div>
               <button
+                ref={errorRetryRef}
                 type="button"
                 onClick={() => refetchArticles()}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-destructive/40 bg-background hover:bg-destructive/10 text-sm font-semibold transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-destructive/40 bg-background hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 text-sm font-semibold transition-all"
               >
                 <RefreshCw className="w-4 h-4" />
                 Retry
@@ -222,10 +250,44 @@ const Index = () => {
                     <ArticleCard {...article} size="small" featured={sort === 'featured' && index === 0} />
                   </div>
                 ))}
+
+                {/* Skeletons appended while fetching the next page */}
+                {isFetchingNextPage && (
+                  <>
+                    {[...Array(3)].map((_, i) => (
+                      <div
+                        key={`next-skel-${i}`}
+                        className="aspect-[4/3] rounded-[2rem] bg-muted animate-pulse"
+                        aria-hidden="true"
+                      />
+                    ))}
+                  </>
+                )}
               </div>
 
               <div className="mt-12 flex flex-col items-center gap-3">
-                {hasNextPage ? (
+                {/* Dedicated Load More error state */}
+                {isFetchNextPageError ? (
+                  <div
+                    role="alert"
+                    aria-live="assertive"
+                    className="rounded-2xl border border-destructive/30 bg-destructive/5 px-6 py-5 text-center flex flex-col items-center gap-3 max-w-md"
+                  >
+                    <p className="text-sm font-semibold text-destructive">Couldn't load more articles</p>
+                    <p className="text-xs text-muted-foreground">
+                      {friendlyError(articlesErrorObj)}
+                    </p>
+                    <button
+                      ref={loadMoreRetryRef}
+                      type="button"
+                      onClick={handleLoadMore}
+                      className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-destructive/40 bg-background hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 text-sm font-semibold transition-all"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Retry load more
+                    </button>
+                  </div>
+                ) : hasNextPage ? (
                   <button
                     onClick={handleLoadMore}
                     disabled={isFetchingNextPage}
