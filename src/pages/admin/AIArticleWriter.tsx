@@ -147,16 +147,6 @@ export default function AIArticleWriter() {
   };
 
   // -------- Drafts: load list on mount, prompt resume --------
-  const fetchDrafts = useCallback(async () => {
-    if (!user) return;
-    const { data, error } = await supabase
-      .from('ai_writer_drafts')
-      .select('id, title, payload, updated_at')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(20);
-    if (!error && data) setDrafts(data as unknown as DraftRow[]);
-  }, [user]);
 
   useEffect(() => {
     (async () => {
