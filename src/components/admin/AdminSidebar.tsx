@@ -6,7 +6,7 @@ import {
   PanelLeftClose, PanelLeft, Newspaper, Globe, Search,
   Palette, Layers, Tags, LayoutGrid, Users, ShoppingCart,
   Mail, Database, BarChart3, Shield, Settings2, Heart,
-  MessageSquare, Navigation, ChevronDown, Languages,
+  MessageSquare, Navigation, ChevronDown, Languages, Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
