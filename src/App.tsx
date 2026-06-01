@@ -53,6 +53,7 @@ import WellnessArticlesList from "./pages/admin/WellnessArticlesList";
 import WellnessArticleEditor from "./pages/admin/WellnessArticleEditor";
 import Settings from "./pages/admin/Settings";
 import LanguagesManager from "./pages/admin/LanguagesManager";
+import AIArticleWriter from "./pages/admin/AIArticleWriter";
 import Preloader from "./components/Preloader";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -108,6 +109,7 @@ const App = () => (
               <Route path="navbar" element={<NavbarEditor />} />
               <Route path="hero" element={<HeroEditor />} />
               <Route path="articles" element={<ArticlesList />} />
+              <Route path="ai-writer" element={<AIArticleWriter />} />
               <Route path="articles/:id" element={<ArticleEditor />} />
               <Route path="categories" element={<CategoriesManager />} />
               <Route path="pages" element={<PagesList />} />
