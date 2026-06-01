@@ -109,6 +109,7 @@ const App = () => (
               <Route path="navbar" element={<NavbarEditor />} />
               <Route path="hero" element={<HeroEditor />} />
               <Route path="articles" element={<ArticlesList />} />
+              <Route path="ai-writer" element={<AIArticleWriter />} />
               <Route path="articles/:id" element={<ArticleEditor />} />
               <Route path="categories" element={<CategoriesManager />} />
               <Route path="pages" element={<PagesList />} />
