@@ -53,6 +53,7 @@ import WellnessArticlesList from "./pages/admin/WellnessArticlesList";
 import WellnessArticleEditor from "./pages/admin/WellnessArticleEditor";
 import Settings from "./pages/admin/Settings";
 import LanguagesManager from "./pages/admin/LanguagesManager";
+import AIArticleWriter from "./pages/admin/AIArticleWriter";
 import Preloader from "./components/Preloader";
 import ScrollToTop from "./components/ScrollToTop";
 
