@@ -310,8 +310,13 @@ export default function AIArticleWriter() {
       });
       const newHtml = (result.content || '').trim();
       if (!newHtml) throw new Error('Empty response');
+      const beforeFull = article.content;
       const updatedSections = sections.map((s, i) => (i === idx ? { ...s, html: newHtml } : s));
-      setArticle({ ...article, content: updatedSections.map((s) => s.html).join('') });
+      const afterFull = updatedSections.map((s) => s.html).join('');
+      setArticle({ ...article, content: afterFull });
+      // Push to history; clear future on a new branch
+      setSectionPast((p) => [...p, { before: beforeFull, after: afterFull, label: section.label }]);
+      setSectionFuture([]);
       setSectionInstruction('');
       toast({ title: 'Section regenerated', description: section.label });
     } catch (e) {
@@ -322,9 +327,57 @@ export default function AIArticleWriter() {
     }
   };
 
+  const undoSectionRegen = () => {
+    if (!article || sectionPast.length === 0) return;
+    const entry = sectionPast[sectionPast.length - 1];
+    setSectionPast((p) => p.slice(0, -1));
+    setSectionFuture((f) => [...f, entry]);
+    setArticle({ ...article, content: entry.before });
+    toast({ title: 'Undid regeneration', description: entry.label });
+  };
+
+  const redoSectionRegen = () => {
+    if (!article || sectionFuture.length === 0) return;
+    const entry = sectionFuture[sectionFuture.length - 1];
+    setSectionFuture((f) => f.slice(0, -1));
+    setSectionPast((p) => [...p, entry]);
+    setArticle({ ...article, content: entry.after });
+    toast({ title: 'Redid regeneration', description: entry.label });
+  };
+
+  // -------- Publish validation --------
+  const validateForPublish = (a: GeneratedArticle): string[] => {
+    const errs: string[] = [];
+    if (!a.title || a.title.trim().length < 5) errs.push('Title is too short.');
+    if (!a.slug || !/^[a-z0-9-]+$/.test(a.slug)) errs.push('Slug is missing or has invalid characters (use a-z, 0-9, hyphens).');
+    if (!a.metaTitle) errs.push('Meta title is required.');
+    else if (a.metaTitle.length > 60) errs.push('Meta title exceeds 60 characters.');
+    if (!a.metaDescription) errs.push('Meta description is required.');
+    else if (a.metaDescription.length < 50) errs.push('Meta description should be at least 50 characters.');
+    else if (a.metaDescription.length > 160) errs.push('Meta description exceeds 160 characters.');
+    if (!a.excerpt || a.excerpt.trim().length < 20) errs.push('Excerpt is required (at least 20 characters).');
+    if (!a.tags || a.tags.length < 2) errs.push('Add at least 2 tags.');
+    const hasH1 = /<h1[\s>]/i.test(a.content || '');
+    const h2Count = (a.content || '').match(/<h2[\s>]/gi)?.length ?? 0;
+    if (!hasH1) errs.push('Content must include an H1.');
+    if (h2Count < 2) errs.push('Content needs at least 2 H2 sections.');
+    return errs;
+  };
+
   // -------- Plagiarism check then save --------
   const requestSave = async (status: 'draft' | 'published') => {
     if (!article) return;
+    if (status === 'published') {
+      const errs = validateForPublish(article);
+      if (errs.length > 0) {
+        toast({
+          title: 'Publish blocked',
+          description: errs.slice(0, 4).join(' '),
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
     setPendingStatus(status);
     setPlagLoading(true);
     setPlagOpen(true);
@@ -343,6 +396,7 @@ export default function AIArticleWriter() {
       setPlagLoading(false);
     }
   };
+
 
   const doSave = async () => {
     if (!article || !pendingStatus) return;
