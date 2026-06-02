@@ -605,10 +605,31 @@ export default function AIArticleWriter() {
                     <Input value={sectionInstruction} onChange={(e) => setSectionInstruction(e.target.value)}
                       placeholder="e.g. add an example, make it more concise…" />
                   </div>
-                  <Button onClick={handleRegenSection} disabled={!!actionLoading || sectionIdx === ''}>
-                    {actionLoading === 'section' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
-                    Regenerate
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button onClick={handleRegenSection} disabled={!!actionLoading || sectionIdx === ''}>
+                      {actionLoading === 'section' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
+                      Regenerate
+                    </Button>
+                  </div>
+                </CardContent>
+                <CardContent className="pt-0 flex flex-wrap items-center justify-between gap-2 border-t">
+                  <div className="text-xs text-muted-foreground pt-3">
+                    {sectionPast.length > 0
+                      ? <>Last regen: <strong>{sectionPast[sectionPast.length - 1].label}</strong></>
+                      : 'No regenerations yet — your other edits stay safe when you undo.'}
+                  </div>
+                  <div className="flex gap-2 pt-3">
+                    <Button variant="outline" size="sm" onClick={undoSectionRegen}
+                      disabled={sectionPast.length === 0 || !!actionLoading}
+                      aria-label="Undo last section regeneration">
+                      <Undo2 className="h-4 w-4 mr-1" /> Undo ({sectionPast.length})
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={redoSectionRegen}
+                      disabled={sectionFuture.length === 0 || !!actionLoading}
+                      aria-label="Redo section regeneration">
+                      <Redo2 className="h-4 w-4 mr-1" /> Redo ({sectionFuture.length})
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
