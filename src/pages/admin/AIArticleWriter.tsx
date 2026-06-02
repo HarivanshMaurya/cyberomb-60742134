@@ -898,13 +898,24 @@ export default function AIArticleWriter() {
                       <span className="text-muted-foreground"> (scanned {plagResult.scanned} articles)</span>
                     </div>
                     {plagResult.matches.length > 0 ? (
-                      <ul className="space-y-1 text-sm">
+                      <ul className="space-y-2 text-sm">
                         {plagResult.matches.map((m) => (
-                          <li key={m.id} className="flex justify-between gap-3 border-b pb-1 last:border-0">
-                            <span className="truncate">{m.title}</span>
+                          <li key={m.id} className="flex items-start justify-between gap-3 border-b pb-2 last:border-0">
+                            <div className="min-w-0 flex-1">
+                              <a
+                                href={`/article/${m.slug}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-medium text-foreground hover:text-primary hover:underline inline-flex items-center gap-1 truncate"
+                              >
+                                <span className="truncate">{m.title}</span>
+                                <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+                              </a>
+                              <div className="text-[11px] text-muted-foreground truncate">/article/{m.slug}</div>
+                            </div>
                             <span className={
-                              m.similarity >= 0.45 ? 'text-destructive font-medium'
-                                : m.similarity >= 0.20 ? 'text-amber-600 font-medium' : 'text-muted-foreground'
+                              m.similarity >= 0.45 ? 'text-destructive font-medium shrink-0'
+                                : m.similarity >= 0.20 ? 'text-amber-600 font-medium shrink-0' : 'text-muted-foreground shrink-0'
                             }>
                               {(m.similarity * 100).toFixed(1)}%
                             </span>
