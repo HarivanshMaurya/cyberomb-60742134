@@ -89,6 +89,30 @@ function splitSections(html: string): { label: string; html: string }[] {
   });
 }
 
+/** Extract FAQ Q/A pairs from a section whose H2 contains "FAQ". */
+function extractFaqs(html: string): { q: string; a: string }[] {
+  if (!html) return [];
+  const sections = splitSections(html);
+  const faqSec = sections.find((s) => /faq/i.test(s.label));
+  if (!faqSec) return [];
+  const body = faqSec.html.replace(/<h2[\s\S]*?<\/h2>/i, '');
+  const re = /<h3[^>]*>([\s\S]*?)<\/h3>([\s\S]*?)(?=<h3[\s>]|$)/gi;
+  const out: { q: string; a: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(body)) !== null) {
+    const q = m[1].replace(/<[^>]+>/g, '').trim();
+    const a = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (q) out.push({ q, a });
+  }
+  return out;
+}
+
+interface SectionHistoryEntry {
+  before: string;
+  after: string;
+  label: string;
+}
+
 export default function AIArticleWriter() {
   const navigate = useNavigate();
   const { user } = useAuth();
