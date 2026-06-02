@@ -748,6 +748,68 @@ export default function AIArticleWriter() {
                     </CardContent>
                   </Card>
 
+                  {/* Publish readiness */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-1">
+                        {publishErrors.length === 0
+                          ? <><ShieldCheck className="h-3 w-3 text-emerald-600" /> Ready to publish</>
+                          : <><AlertTriangle className="h-3 w-3 text-amber-500" /> Publish checklist</>}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {publishErrors.length === 0 ? (
+                        <p className="text-xs text-emerald-600">All required SEO fields, tags, and sections look good.</p>
+                      ) : (
+                        <ul className="text-xs space-y-1 text-muted-foreground">
+                          {publishErrors.map((e, i) => (
+                            <li key={i} className="flex gap-2"><span className="text-destructive">•</span>{e}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* FAQ Rich Result preview */}
+                  {faqs.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center gap-1">
+                          <HelpCircle className="h-3 w-3" /> FAQ Rich Result
+                        </CardTitle>
+                        <CardDescription className="text-[11px]">
+                          How your FAQs may appear in Google search.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="rounded-lg border bg-card p-3 space-y-1">
+                          <div className="text-[11px] text-muted-foreground truncate">
+                            {SITE_ORIGIN.replace(/^https?:\/\//, '')} › {article.slug || 'slug'}
+                          </div>
+                          <div className="text-[#1a0dab] dark:text-blue-400 text-sm leading-snug truncate">
+                            {article.metaTitle || article.title}
+                          </div>
+                          <Accordion type="single" collapsible className="mt-1">
+                            {faqs.slice(0, 5).map((f, i) => (
+                              <AccordionItem key={i} value={`faq-${i}`} className="border-b last:border-0">
+                                <AccordionTrigger className="py-2 text-xs text-left hover:no-underline">
+                                  {f.q}
+                                </AccordionTrigger>
+                                <AccordionContent className="text-[11px] text-muted-foreground pb-2">
+                                  {f.a.slice(0, 220)}{f.a.length > 220 ? '…' : ''}
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                          <div className="text-[10px] text-muted-foreground pt-1">
+                            {faqs.length} FAQ{faqs.length === 1 ? '' : 's'} detected
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+
                   {article.summary && (
                     <Card>
                       <CardHeader className="pb-3"><CardTitle className="text-sm">Summary</CardTitle></CardHeader>
