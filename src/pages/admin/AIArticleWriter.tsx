@@ -24,7 +24,11 @@ import {
   Sparkles, Wand2, RefreshCw, Search, SpellCheck, Save, Send,
   Loader2, Copy, FileText, Tag as TagIcon, Languages as LangIcon,
   Cloud, CloudOff, ShieldCheck, ShieldAlert, History, Trash2,
+  Undo2, Redo2, ExternalLink, HelpCircle, Link as LinkIcon, AlertTriangle,
 } from 'lucide-react';
+import {
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
+} from '@/components/ui/accordion';
 
 type Tone = 'Professional' | 'Casual' | 'Technical' | 'Friendly';
 type Language = 'English' | 'Hindi' | 'Hinglish';
