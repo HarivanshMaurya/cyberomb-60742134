@@ -24,7 +24,11 @@ import {
   Sparkles, Wand2, RefreshCw, Search, SpellCheck, Save, Send,
   Loader2, Copy, FileText, Tag as TagIcon, Languages as LangIcon,
   Cloud, CloudOff, ShieldCheck, ShieldAlert, History, Trash2,
+  Undo2, Redo2, ExternalLink, HelpCircle, Link as LinkIcon, AlertTriangle,
 } from 'lucide-react';
+import {
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
+} from '@/components/ui/accordion';
 
 type Tone = 'Professional' | 'Casual' | 'Technical' | 'Friendly';
 type Language = 'English' | 'Hindi' | 'Hinglish';
@@ -85,6 +89,48 @@ function splitSections(html: string): { label: string; html: string }[] {
   });
 }
 
+/** Extract FAQ Q/A pairs from a section whose H2 contains "FAQ". */
+function extractFaqs(html: string): { q: string; a: string }[] {
+  if (!html) return [];
+  const sections = splitSections(html);
+  const faqSec = sections.find((s) => /faq/i.test(s.label));
+  if (!faqSec) return [];
+  const body = faqSec.html.replace(/<h2[\s\S]*?<\/h2>/i, '');
+  const re = /<h3[^>]*>([\s\S]*?)<\/h3>([\s\S]*?)(?=<h3[\s>]|$)/gi;
+  const out: { q: string; a: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(body)) !== null) {
+    const q = m[1].replace(/<[^>]+>/g, '').trim();
+    const a = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (q) out.push({ q, a });
+  }
+  return out;
+}
+
+interface SectionHistoryEntry {
+  before: string;
+  after: string;
+  label: string;
+}
+
+function validateForPublish(a: GeneratedArticle): string[] {
+  const errs: string[] = [];
+  if (!a.title || a.title.trim().length < 5) errs.push('Title is too short.');
+  if (!a.slug || !/^[a-z0-9-]+$/.test(a.slug)) errs.push('Slug is missing or has invalid characters (use a-z, 0-9, hyphens).');
+  if (!a.metaTitle) errs.push('Meta title is required.');
+  else if (a.metaTitle.length > 60) errs.push('Meta title exceeds 60 characters.');
+  if (!a.metaDescription) errs.push('Meta description is required.');
+  else if (a.metaDescription.length < 50) errs.push('Meta description should be at least 50 characters.');
+  else if (a.metaDescription.length > 160) errs.push('Meta description exceeds 160 characters.');
+  if (!a.excerpt || a.excerpt.trim().length < 20) errs.push('Excerpt is required (at least 20 characters).');
+  if (!a.tags || a.tags.length < 2) errs.push('Add at least 2 tags.');
+  const hasH1 = /<h1[\s>]/i.test(a.content || '');
+  const h2Count = (a.content || '').match(/<h2[\s>]/gi)?.length ?? 0;
+  if (!hasH1) errs.push('Content must include an H1.');
+  if (h2Count < 2) errs.push('Content needs at least 2 H2 sections.');
+  return errs;
+}
+
 export default function AIArticleWriter() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -116,6 +162,8 @@ export default function AIArticleWriter() {
   // Section regen
   const [sectionIdx, setSectionIdx] = useState<string>('');
   const [sectionInstruction, setSectionInstruction] = useState('');
+  const [sectionPast, setSectionPast] = useState<SectionHistoryEntry[]>([]);
+  const [sectionFuture, setSectionFuture] = useState<SectionHistoryEntry[]>([]);
 
   // Plagiarism
   const [plagOpen, setPlagOpen] = useState(false);
@@ -263,6 +311,8 @@ export default function AIArticleWriter() {
 
   // -------- Section regeneration --------
   const sections = useMemo(() => (article ? splitSections(article.content) : []), [article]);
+  const faqs = useMemo(() => (article ? extractFaqs(article.content) : []), [article]);
+  const publishErrors = useMemo(() => (article ? validateForPublish(article) : []), [article]);
 
   const handleRegenSection = async () => {
     if (!article || sectionIdx === '') return;
@@ -280,8 +330,13 @@ export default function AIArticleWriter() {
       });
       const newHtml = (result.content || '').trim();
       if (!newHtml) throw new Error('Empty response');
+      const beforeFull = article.content;
       const updatedSections = sections.map((s, i) => (i === idx ? { ...s, html: newHtml } : s));
-      setArticle({ ...article, content: updatedSections.map((s) => s.html).join('') });
+      const afterFull = updatedSections.map((s) => s.html).join('');
+      setArticle({ ...article, content: afterFull });
+      // Push to history; clear future on a new branch
+      setSectionPast((p) => [...p, { before: beforeFull, after: afterFull, label: section.label }]);
+      setSectionFuture([]);
       setSectionInstruction('');
       toast({ title: 'Section regenerated', description: section.label });
     } catch (e) {
@@ -292,9 +347,40 @@ export default function AIArticleWriter() {
     }
   };
 
+  const undoSectionRegen = () => {
+    if (!article || sectionPast.length === 0) return;
+    const entry = sectionPast[sectionPast.length - 1];
+    setSectionPast((p) => p.slice(0, -1));
+    setSectionFuture((f) => [...f, entry]);
+    setArticle({ ...article, content: entry.before });
+    toast({ title: 'Undid regeneration', description: entry.label });
+  };
+
+  const redoSectionRegen = () => {
+    if (!article || sectionFuture.length === 0) return;
+    const entry = sectionFuture[sectionFuture.length - 1];
+    setSectionFuture((f) => f.slice(0, -1));
+    setSectionPast((p) => [...p, entry]);
+    setArticle({ ...article, content: entry.after });
+    toast({ title: 'Redid regeneration', description: entry.label });
+  };
+
+  // -------- Publish validation (defined as outer helper below) --------
+
   // -------- Plagiarism check then save --------
   const requestSave = async (status: 'draft' | 'published') => {
     if (!article) return;
+    if (status === 'published') {
+      const errs = validateForPublish(article);
+      if (errs.length > 0) {
+        toast({
+          title: 'Publish blocked',
+          description: errs.slice(0, 4).join(' '),
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
     setPendingStatus(status);
     setPlagLoading(true);
     setPlagOpen(true);
@@ -313,6 +399,7 @@ export default function AIArticleWriter() {
       setPlagLoading(false);
     }
   };
+
 
   const doSave = async () => {
     if (!article || !pendingStatus) return;
@@ -518,10 +605,31 @@ export default function AIArticleWriter() {
                     <Input value={sectionInstruction} onChange={(e) => setSectionInstruction(e.target.value)}
                       placeholder="e.g. add an example, make it more concise…" />
                   </div>
-                  <Button onClick={handleRegenSection} disabled={!!actionLoading || sectionIdx === ''}>
-                    {actionLoading === 'section' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
-                    Regenerate
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button onClick={handleRegenSection} disabled={!!actionLoading || sectionIdx === ''}>
+                      {actionLoading === 'section' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Wand2 className="h-4 w-4 mr-1" />}
+                      Regenerate
+                    </Button>
+                  </div>
+                </CardContent>
+                <CardContent className="pt-0 flex flex-wrap items-center justify-between gap-2 border-t">
+                  <div className="text-xs text-muted-foreground pt-3">
+                    {sectionPast.length > 0
+                      ? <>Last regen: <strong>{sectionPast[sectionPast.length - 1].label}</strong></>
+                      : 'No regenerations yet — your other edits stay safe when you undo.'}
+                  </div>
+                  <div className="flex gap-2 pt-3">
+                    <Button variant="outline" size="sm" onClick={undoSectionRegen}
+                      disabled={sectionPast.length === 0 || !!actionLoading}
+                      aria-label="Undo last section regeneration">
+                      <Undo2 className="h-4 w-4 mr-1" /> Undo ({sectionPast.length})
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={redoSectionRegen}
+                      disabled={sectionFuture.length === 0 || !!actionLoading}
+                      aria-label="Redo section regeneration">
+                      <Redo2 className="h-4 w-4 mr-1" /> Redo ({sectionFuture.length})
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -595,8 +703,23 @@ export default function AIArticleWriter() {
                     <CardHeader className="pb-3"><CardTitle className="text-sm">SEO</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Slug</Label>
-                        <Input value={article.slug} onChange={(e) => setArticle({ ...article, slug: e.target.value })} />
+                        <Label className="text-xs flex items-center justify-between">
+                          <span className="flex items-center gap-1"><LinkIcon className="h-3 w-3" /> URL slug</span>
+                          <button type="button" className="text-[11px] text-primary hover:underline"
+                            onClick={() => setArticle({ ...article, slug: slugify(article.title) })}>
+                            Reset from title
+                          </button>
+                        </Label>
+                        <Input value={article.slug}
+                          onChange={(e) => setArticle({ ...article, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                          onBlur={(e) => setArticle({ ...article, slug: slugify(e.target.value) })}
+                          placeholder="my-article-slug" />
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          Final URL: {SITE_ORIGIN}/{article.slug || 'slug'}
+                        </div>
+                        {article.slug && !/^[a-z0-9-]+$/.test(article.slug) && (
+                          <div className="text-[11px] text-destructive">Only a-z, 0-9 and hyphens allowed.</div>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs flex justify-between">
@@ -624,6 +747,68 @@ export default function AIArticleWriter() {
                       </div>
                     </CardContent>
                   </Card>
+
+                  {/* Publish readiness */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-1">
+                        {publishErrors.length === 0
+                          ? <><ShieldCheck className="h-3 w-3 text-emerald-600" /> Ready to publish</>
+                          : <><AlertTriangle className="h-3 w-3 text-amber-500" /> Publish checklist</>}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {publishErrors.length === 0 ? (
+                        <p className="text-xs text-emerald-600">All required SEO fields, tags, and sections look good.</p>
+                      ) : (
+                        <ul className="text-xs space-y-1 text-muted-foreground">
+                          {publishErrors.map((e, i) => (
+                            <li key={i} className="flex gap-2"><span className="text-destructive">•</span>{e}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* FAQ Rich Result preview */}
+                  {faqs.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center gap-1">
+                          <HelpCircle className="h-3 w-3" /> FAQ Rich Result
+                        </CardTitle>
+                        <CardDescription className="text-[11px]">
+                          How your FAQs may appear in Google search.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="rounded-lg border bg-card p-3 space-y-1">
+                          <div className="text-[11px] text-muted-foreground truncate">
+                            {SITE_ORIGIN.replace(/^https?:\/\//, '')} › {article.slug || 'slug'}
+                          </div>
+                          <div className="text-[#1a0dab] dark:text-blue-400 text-sm leading-snug truncate">
+                            {article.metaTitle || article.title}
+                          </div>
+                          <Accordion type="single" collapsible className="mt-1">
+                            {faqs.slice(0, 5).map((f, i) => (
+                              <AccordionItem key={i} value={`faq-${i}`} className="border-b last:border-0">
+                                <AccordionTrigger className="py-2 text-xs text-left hover:no-underline">
+                                  {f.q}
+                                </AccordionTrigger>
+                                <AccordionContent className="text-[11px] text-muted-foreground pb-2">
+                                  {f.a.slice(0, 220)}{f.a.length > 220 ? '…' : ''}
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                          <div className="text-[10px] text-muted-foreground pt-1">
+                            {faqs.length} FAQ{faqs.length === 1 ? '' : 's'} detected
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
 
                   {article.summary && (
                     <Card>
@@ -713,13 +898,24 @@ export default function AIArticleWriter() {
                       <span className="text-muted-foreground"> (scanned {plagResult.scanned} articles)</span>
                     </div>
                     {plagResult.matches.length > 0 ? (
-                      <ul className="space-y-1 text-sm">
+                      <ul className="space-y-2 text-sm">
                         {plagResult.matches.map((m) => (
-                          <li key={m.id} className="flex justify-between gap-3 border-b pb-1 last:border-0">
-                            <span className="truncate">{m.title}</span>
+                          <li key={m.id} className="flex items-start justify-between gap-3 border-b pb-2 last:border-0">
+                            <div className="min-w-0 flex-1">
+                              <a
+                                href={`/article/${m.slug}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-medium text-foreground hover:text-primary hover:underline inline-flex items-center gap-1 truncate"
+                              >
+                                <span className="truncate">{m.title}</span>
+                                <ExternalLink className="h-3 w-3 shrink-0 opacity-60" />
+                              </a>
+                              <div className="text-[11px] text-muted-foreground truncate">/article/{m.slug}</div>
+                            </div>
                             <span className={
-                              m.similarity >= 0.45 ? 'text-destructive font-medium'
-                                : m.similarity >= 0.20 ? 'text-amber-600 font-medium' : 'text-muted-foreground'
+                              m.similarity >= 0.45 ? 'text-destructive font-medium shrink-0'
+                                : m.similarity >= 0.20 ? 'text-amber-600 font-medium shrink-0' : 'text-muted-foreground shrink-0'
                             }>
                               {(m.similarity * 100).toFixed(1)}%
                             </span>
