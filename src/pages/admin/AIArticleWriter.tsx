@@ -703,8 +703,23 @@ export default function AIArticleWriter() {
                     <CardHeader className="pb-3"><CardTitle className="text-sm">SEO</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Slug</Label>
-                        <Input value={article.slug} onChange={(e) => setArticle({ ...article, slug: e.target.value })} />
+                        <Label className="text-xs flex items-center justify-between">
+                          <span className="flex items-center gap-1"><LinkIcon className="h-3 w-3" /> URL slug</span>
+                          <button type="button" className="text-[11px] text-primary hover:underline"
+                            onClick={() => setArticle({ ...article, slug: slugify(article.title) })}>
+                            Reset from title
+                          </button>
+                        </Label>
+                        <Input value={article.slug}
+                          onChange={(e) => setArticle({ ...article, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                          onBlur={(e) => setArticle({ ...article, slug: slugify(e.target.value) })}
+                          placeholder="my-article-slug" />
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          Final URL: {SITE_ORIGIN}/{article.slug || 'slug'}
+                        </div>
+                        {article.slug && !/^[a-z0-9-]+$/.test(article.slug) && (
+                          <div className="text-[11px] text-destructive">Only a-z, 0-9 and hyphens allowed.</div>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs flex justify-between">
