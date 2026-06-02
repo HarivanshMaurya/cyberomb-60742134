@@ -347,24 +347,7 @@ export default function AIArticleWriter() {
     toast({ title: 'Redid regeneration', description: entry.label });
   };
 
-  // -------- Publish validation --------
-  const validateForPublish = (a: GeneratedArticle): string[] => {
-    const errs: string[] = [];
-    if (!a.title || a.title.trim().length < 5) errs.push('Title is too short.');
-    if (!a.slug || !/^[a-z0-9-]+$/.test(a.slug)) errs.push('Slug is missing or has invalid characters (use a-z, 0-9, hyphens).');
-    if (!a.metaTitle) errs.push('Meta title is required.');
-    else if (a.metaTitle.length > 60) errs.push('Meta title exceeds 60 characters.');
-    if (!a.metaDescription) errs.push('Meta description is required.');
-    else if (a.metaDescription.length < 50) errs.push('Meta description should be at least 50 characters.');
-    else if (a.metaDescription.length > 160) errs.push('Meta description exceeds 160 characters.');
-    if (!a.excerpt || a.excerpt.trim().length < 20) errs.push('Excerpt is required (at least 20 characters).');
-    if (!a.tags || a.tags.length < 2) errs.push('Add at least 2 tags.');
-    const hasH1 = /<h1[\s>]/i.test(a.content || '');
-    const h2Count = (a.content || '').match(/<h2[\s>]/gi)?.length ?? 0;
-    if (!hasH1) errs.push('Content must include an H1.');
-    if (h2Count < 2) errs.push('Content needs at least 2 H2 sections.');
-    return errs;
-  };
+  // -------- Publish validation (defined as outer helper below) --------
 
   // -------- Plagiarism check then save --------
   const requestSave = async (status: 'draft' | 'published') => {
