@@ -144,6 +144,8 @@ export default function AIArticleWriter() {
   // Section regen
   const [sectionIdx, setSectionIdx] = useState<string>('');
   const [sectionInstruction, setSectionInstruction] = useState('');
+  const [sectionPast, setSectionPast] = useState<SectionHistoryEntry[]>([]);
+  const [sectionFuture, setSectionFuture] = useState<SectionHistoryEntry[]>([]);
 
   // Plagiarism
   const [plagOpen, setPlagOpen] = useState(false);
