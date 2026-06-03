@@ -454,7 +454,7 @@ export default function AIArticleWriter() {
   // -------- Section regeneration --------
   const sections = useMemo(() => (article ? splitSections(article.content) : []), [article]);
   const faqs = useMemo(() => (article ? extractFaqs(article.content) : []), [article]);
-  const publishErrors = useMemo(() => (article ? validateForPublish(article) : []), [article]);
+  // publishErrors are computed on-demand inside requestSave
 
   const handleRegenSection = async () => {
     if (!article || sectionIdx === '') return;
