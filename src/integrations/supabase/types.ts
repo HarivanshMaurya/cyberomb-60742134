@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_writer_draft_versions: {
+        Row: {
+          created_at: string
+          draft_id: string
+          id: string
+          label: string | null
+          payload: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          draft_id: string
+          id?: string
+          label?: string | null
+          payload?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          draft_id?: string
+          id?: string
+          label?: string | null
+          payload?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_writer_draft_versions_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "ai_writer_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_writer_drafts: {
         Row: {
           created_at: string

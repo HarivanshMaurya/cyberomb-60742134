@@ -25,6 +25,7 @@ import {
   Loader2, Copy, FileText, Tag as TagIcon, Languages as LangIcon,
   Cloud, CloudOff, ShieldCheck, ShieldAlert, History, Trash2,
   Undo2, Redo2, ExternalLink, HelpCircle, Link as LinkIcon, AlertTriangle,
+  ListChecks, Share2, Image as ImageIcon, RotateCcw, Plus, Check, Download,
 } from 'lucide-react';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
@@ -47,6 +48,7 @@ interface GeneratedArticle {
   categorySuggestions?: string[];
   readTime?: string;
   content: string;
+  ogImage?: string;
 }
 
 interface PlagiarismMatch {
@@ -67,6 +69,13 @@ interface DraftRow {
   title: string;
   payload: GeneratedArticle;
   updated_at: string;
+}
+
+interface VersionRow {
+  id: string;
+  created_at: string;
+  label: string | null;
+  payload: GeneratedArticle;
 }
 
 const SITE_ORIGIN = 'https://cyberomb.lovable.app';
@@ -114,21 +123,99 @@ interface SectionHistoryEntry {
 }
 
 function validateForPublish(a: GeneratedArticle): string[] {
-  const errs: string[] = [];
-  if (!a.title || a.title.trim().length < 5) errs.push('Title is too short.');
-  if (!a.slug || !/^[a-z0-9-]+$/.test(a.slug)) errs.push('Slug is missing or has invalid characters (use a-z, 0-9, hyphens).');
-  if (!a.metaTitle) errs.push('Meta title is required.');
-  else if (a.metaTitle.length > 60) errs.push('Meta title exceeds 60 characters.');
-  if (!a.metaDescription) errs.push('Meta description is required.');
-  else if (a.metaDescription.length < 50) errs.push('Meta description should be at least 50 characters.');
-  else if (a.metaDescription.length > 160) errs.push('Meta description exceeds 160 characters.');
-  if (!a.excerpt || a.excerpt.trim().length < 20) errs.push('Excerpt is required (at least 20 characters).');
-  if (!a.tags || a.tags.length < 2) errs.push('Add at least 2 tags.');
+  return buildChecklist(a).filter((c) => !c.ok && c.id !== 'og').map((c) => c.label);
+}
+
+type CheckItem = { id: string; label: string; ok: boolean; group: 'SEO' | 'Content' | 'Tags & Slug' };
+
+function buildChecklist(a: GeneratedArticle): CheckItem[] {
   const hasH1 = /<h1[\s>]/i.test(a.content || '');
   const h2Count = (a.content || '').match(/<h2[\s>]/gi)?.length ?? 0;
-  if (!hasH1) errs.push('Content must include an H1.');
-  if (h2Count < 2) errs.push('Content needs at least 2 H2 sections.');
-  return errs;
+  const mt = a.metaTitle || '';
+  const md = a.metaDescription || '';
+  return [
+    { id: 'title', group: 'Content', label: 'Title is at least 5 characters.', ok: !!a.title && a.title.trim().length >= 5 },
+    { id: 'excerpt', group: 'Content', label: 'Excerpt has at least 20 characters.', ok: !!a.excerpt && a.excerpt.trim().length >= 20 },
+    { id: 'h1', group: 'Content', label: 'Content includes an H1.', ok: hasH1 },
+    { id: 'h2', group: 'Content', label: 'Content has at least 2 H2 sections.', ok: h2Count >= 2 },
+    { id: 'mt', group: 'SEO', label: 'Meta title is set and ≤ 60 chars.', ok: !!mt && mt.length <= 60 },
+    { id: 'md', group: 'SEO', label: 'Meta description is 50–160 chars.', ok: md.length >= 50 && md.length <= 160 },
+    { id: 'og', group: 'SEO', label: 'OG image URL is set (optional but recommended).', ok: !!a.ogImage && /^https?:\/\//.test(a.ogImage) },
+    { id: 'slug', group: 'Tags & Slug', label: 'Slug uses a-z, 0-9 and hyphens only.', ok: !!a.slug && /^[a-z0-9-]+$/.test(a.slug) },
+    { id: 'tags', group: 'Tags & Slug', label: 'At least 2 tags added.', ok: (a.tags?.length ?? 0) >= 2 },
+  ];
+}
+
+const STOPWORDS = new Set([
+  'the','and','for','with','that','this','from','have','has','was','were','are','will','your','you','our','their','they',
+  'about','into','onto','than','then','what','when','where','which','while','also','been','being','more','most','some',
+  'such','only','very','just','like','over','under','after','before','because','between','during','these','those','here',
+  'there','make','made','take','taken','using','use','used','can','could','should','would','may','might','one','two','three',
+  'who','how','why','its','it\'s','isn\'t','don\'t','doesn\'t','not','but','any','all','own','out','off','too','via','per',
+  'on','in','to','of','as','at','by','an','a','is','be','or','if','so','do','no','we','i','my','me'
+]);
+
+function suggestTagsFromContent(a: GeneratedArticle): string[] {
+  const text = `${a.title} ${a.metaDescription || ''} ${(a.content || '').replace(/<[^>]+>/g, ' ')}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ');
+  const tokens = text.split(/\s+/).filter((w) => w.length >= 4 && !STOPWORDS.has(w));
+  const freq = new Map<string, number>();
+  for (const t of tokens) freq.set(t, (freq.get(t) || 0) + 1);
+  // bigrams
+  const words = tokens;
+  for (let i = 0; i < words.length - 1; i++) {
+    const bg = `${words[i]} ${words[i + 1]}`;
+    if (bg.length <= 32) freq.set(bg, (freq.get(bg) || 0) + 2);
+  }
+  const existing = new Set((a.tags || []).map((t) => t.toLowerCase()));
+  return Array.from(freq.entries())
+    .filter(([w, c]) => c >= 3 && !existing.has(w))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([w]) => w);
+}
+
+function escapeXml(s: string) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function wrapWords(s: string, maxChars: number, maxLines: number): string[] {
+  const words = s.split(/\s+/);
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    if ((cur + ' ' + w).trim().length > maxChars) {
+      if (cur) lines.push(cur.trim());
+      cur = w;
+      if (lines.length === maxLines - 1) break;
+    } else cur = cur ? cur + ' ' + w : w;
+  }
+  if (cur && lines.length < maxLines) lines.push(cur.trim());
+  return lines;
+}
+function buildOgSvg(a: GeneratedArticle, site: string): string {
+  const title = a.metaTitle || a.title || 'Untitled';
+  const desc = a.metaDescription || a.excerpt || '';
+  const titleLines = wrapWords(title, 28, 3);
+  const descLines = wrapWords(desc, 60, 2);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/><stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c8a97e"/><stop offset="1" stop-color="#e8d5b5"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1080" cy="120" r="260" fill="#c8a97e" opacity="0.07"/>
+  <rect x="70" y="80" width="6" height="60" rx="3" fill="url(#accent)"/>
+  <text x="90" y="118" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700" fill="#c8a97e" letter-spacing="4">${escapeXml(site.toUpperCase())}</text>
+  ${titleLines.map((l, i) => `<text x="70" y="${230 + i * 64}" font-family="Georgia,serif" font-size="54" font-weight="700" fill="#f8fafc">${escapeXml(l)}</text>`).join('')}
+  ${descLines.map((l, i) => `<text x="70" y="${260 + titleLines.length * 64 + i * 32}" font-family="Inter,Arial,sans-serif" font-size="22" fill="#cbd5e1">${escapeXml(l)}</text>`).join('')}
+  <line x1="70" y1="540" x2="1130" y2="540" stroke="#c8a97e" stroke-opacity="0.25"/>
+  <text x="70" y="585" font-family="Inter,Arial,sans-serif" font-size="20" fill="#94a3b8">${escapeXml((a.tags || []).slice(0, 4).map((t) => '#' + t).join('  '))}</text>
+</svg>`;
 }
 
 export default function AIArticleWriter() {
@@ -175,6 +262,14 @@ export default function AIArticleWriter() {
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
   const [resumeOpen, setResumeOpen] = useState(false);
 
+  // Version history
+  const [versions, setVersions] = useState<VersionRow[]>([]);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const lastVersionAtRef = useRef<number>(0);
+
+  // Tag suggestions
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+
   const startProgress = () => {
     setProgress(8);
     progressTimer.current = setInterval(() => {
@@ -219,11 +314,12 @@ export default function AIArticleWriter() {
     setSaveStatus('saving');
     autosaveTimer.current = setTimeout(async () => {
       try {
-        if (draftId) {
+        let activeDraftId = draftId;
+        if (activeDraftId) {
           const { error } = await supabase
             .from('ai_writer_drafts')
             .update({ title: article.title || 'Untitled draft', payload: article as never })
-            .eq('id', draftId);
+            .eq('id', activeDraftId);
           if (error) throw error;
         } else {
           const { data, error } = await supabase
@@ -236,10 +332,22 @@ export default function AIArticleWriter() {
             .select('id')
             .single();
           if (error) throw error;
-          setDraftId(data.id);
+          activeDraftId = data.id;
+          setDraftId(activeDraftId);
         }
         setSaveStatus('saved');
         setLastSavedAt(new Date());
+        // Snapshot a version at most once every 60s
+        const now = Date.now();
+        if (activeDraftId && now - lastVersionAtRef.current > 60_000) {
+          lastVersionAtRef.current = now;
+          await supabase.from('ai_writer_draft_versions').insert({
+            draft_id: activeDraftId,
+            user_id: user.id,
+            label: 'Auto-save',
+            payload: article as never,
+          });
+        }
       } catch {
         setSaveStatus('error');
       }
@@ -248,6 +356,40 @@ export default function AIArticleWriter() {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
   }, [article, draftId, user]);
+
+  // Load version list when a draft is active or panel opens
+  const loadVersions = async (id: string) => {
+    const { data } = await supabase
+      .from('ai_writer_draft_versions')
+      .select('id, created_at, label, payload')
+      .eq('draft_id', id)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (data) setVersions(data as unknown as VersionRow[]);
+  };
+  useEffect(() => {
+    if (draftId) loadVersions(draftId);
+    else setVersions([]);
+  }, [draftId]);
+
+  const snapshotNow = async (label: string) => {
+    if (!article || !user || !draftId) return;
+    const { data } = await supabase
+      .from('ai_writer_draft_versions')
+      .insert({ draft_id: draftId, user_id: user.id, label, payload: article as never })
+      .select('id, created_at, label, payload')
+      .single();
+    if (data) {
+      setVersions((v) => [data as unknown as VersionRow, ...v]);
+      lastVersionAtRef.current = Date.now();
+      toast({ title: 'Snapshot saved', description: label });
+    }
+  };
+  const restoreVersion = (v: VersionRow) => {
+    setArticle(v.payload);
+    setVersionsOpen(false);
+    toast({ title: 'Version restored', description: new Date(v.created_at).toLocaleString() });
+  };
 
   const resumeDraft = (d: DraftRow) => {
     setArticle(d.payload);
@@ -312,7 +454,7 @@ export default function AIArticleWriter() {
   // -------- Section regeneration --------
   const sections = useMemo(() => (article ? splitSections(article.content) : []), [article]);
   const faqs = useMemo(() => (article ? extractFaqs(article.content) : []), [article]);
-  const publishErrors = useMemo(() => (article ? validateForPublish(article) : []), [article]);
+  // publishErrors are computed on-demand inside requestSave
 
   const handleRegenSection = async () => {
     if (!article || sectionIdx === '') return;
@@ -458,10 +600,20 @@ export default function AIArticleWriter() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {article && (
+              <div className="px-2.5 py-1 rounded-full border bg-background/60 backdrop-blur">
+                <SaveBadge />
+              </div>
+            )}
+            {article && draftId && (
+              <Button variant="outline" size="sm" onClick={() => setVersionsOpen(true)}>
+                <History className="h-4 w-4 mr-1" /> Versions ({versions.length})
+              </Button>
+            )}
             {drafts.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setResumeOpen(true)}>
-                <History className="h-4 w-4 mr-1" /> Drafts ({drafts.length})
+                <FileText className="h-4 w-4 mr-1" /> Drafts ({drafts.length})
               </Button>
             )}
             <Badge variant="secondary" className="gap-1"><Wand2 className="h-3 w-3" /> Gemini 2.5</Badge>
@@ -745,28 +897,127 @@ export default function AIArticleWriter() {
                         <Textarea rows={2} value={article.excerpt}
                           onChange={(e) => setArticle({ ...article, excerpt: e.target.value })} />
                       </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs flex items-center gap-1">
+                          <ImageIcon className="h-3 w-3" /> OG image URL
+                          <span className="text-muted-foreground font-normal">(optional)</span>
+                        </Label>
+                        <Input
+                          value={article.ogImage || ''}
+                          placeholder="https://… or leave blank to use generated preview"
+                          onChange={(e) => setArticle({ ...article, ogImage: e.target.value })}
+                        />
+                      </div>
                     </CardContent>
                   </Card>
 
-                  {/* Publish readiness */}
+                  {/* SEO Checklist with progress */}
+                  {(() => {
+                    const items = buildChecklist(article);
+                    const passed = items.filter((i) => i.ok).length;
+                    const pct = Math.round((passed / items.length) * 100);
+                    const groups: ('Content' | 'SEO' | 'Tags & Slug')[] = ['Content', 'SEO', 'Tags & Slug'];
+                    return (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm flex items-center justify-between gap-2">
+                            <span className="flex items-center gap-1">
+                              <ListChecks className="h-3 w-3" />
+                              {pct === 100 ? 'Ready to publish' : 'SEO checklist'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{passed}/{items.length}</span>
+                          </CardTitle>
+                          <Progress value={pct} className="h-1.5 mt-2" />
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {groups.map((g) => (
+                            <div key={g}>
+                              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{g}</div>
+                              <ul className="space-y-1">
+                                {items.filter((i) => i.group === g).map((i) => (
+                                  <li key={i.id} className="flex items-start gap-2 text-xs">
+                                    {i.ok
+                                      ? <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                                      : <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />}
+                                    <span className={i.ok ? 'text-muted-foreground line-through' : ''}>{i.label}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
+
+                  {/* Social media preview */}
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm flex items-center gap-1">
-                        {publishErrors.length === 0
-                          ? <><ShieldCheck className="h-3 w-3 text-emerald-600" /> Ready to publish</>
-                          : <><AlertTriangle className="h-3 w-3 text-amber-500" /> Publish checklist</>}
-                      </CardTitle>
+                      <CardTitle className="text-sm flex items-center gap-1"><Share2 className="h-3 w-3" /> Social preview</CardTitle>
+                      <CardDescription className="text-[11px]">How your link will look when shared.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      {publishErrors.length === 0 ? (
-                        <p className="text-xs text-emerald-600">All required SEO fields, tags, and sections look good.</p>
-                      ) : (
-                        <ul className="text-xs space-y-1 text-muted-foreground">
-                          {publishErrors.map((e, i) => (
-                            <li key={i} className="flex gap-2"><span className="text-destructive">•</span>{e}</li>
-                          ))}
-                        </ul>
-                      )}
+                    <CardContent className="space-y-3">
+                      {(() => {
+                        const ogUrl = article.ogImage && /^https?:\/\//.test(article.ogImage)
+                          ? article.ogImage
+                          : `data:image/svg+xml;utf8,${encodeURIComponent(buildOgSvg(article, 'Cyberom'))}`;
+                        const host = SITE_ORIGIN.replace(/^https?:\/\//, '');
+                        return (
+                          <>
+                            {/* Facebook / LinkedIn style */}
+                            <div className="rounded-lg border overflow-hidden bg-card">
+                              <div className="aspect-[1200/630] bg-muted overflow-hidden">
+                                <img src={ogUrl} alt="OG preview" className="w-full h-full object-cover" />
+                              </div>
+                              <div className="p-3 bg-muted/40 space-y-0.5">
+                                <div className="text-[10px] uppercase text-muted-foreground tracking-wide">{host}</div>
+                                <div className="text-sm font-semibold leading-snug line-clamp-2">{article.metaTitle || article.title}</div>
+                                <div className="text-xs text-muted-foreground line-clamp-2">{article.metaDescription || article.excerpt}</div>
+                              </div>
+                            </div>
+                            {/* Twitter / X style summary_large_image */}
+                            <div className="rounded-2xl border overflow-hidden bg-card">
+                              <div className="aspect-[1200/630] bg-muted overflow-hidden">
+                                <img src={ogUrl} alt="Twitter preview" className="w-full h-full object-cover" />
+                              </div>
+                              <div className="p-3 space-y-0.5">
+                                <div className="text-sm font-semibold leading-snug line-clamp-1">{article.metaTitle || article.title}</div>
+                                <div className="text-xs text-muted-foreground line-clamp-2">{article.metaDescription || article.excerpt}</div>
+                                <div className="text-[11px] text-muted-foreground">🔗 {host}</div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm" variant="outline" className="flex-1"
+                                onClick={() => {
+                                  const svg = buildOgSvg(article, 'Cyberom');
+                                  const blob = new Blob([svg], { type: 'image/svg+xml' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `${article.slug || 'og-image'}.svg`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                }}
+                              >
+                                <Download className="h-3.5 w-3.5 mr-1" /> Download OG image
+                              </Button>
+                              {!article.ogImage && (
+                                <Button
+                                  size="sm" variant="secondary"
+                                  onClick={() => {
+                                    const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(buildOgSvg(article, 'Cyberom'))}`;
+                                    setArticle({ ...article, ogImage: dataUrl });
+                                    toast({ title: 'Generated OG image attached' });
+                                  }}
+                                >
+                                  Use generated
+                                </Button>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
 
@@ -817,29 +1068,82 @@ export default function AIArticleWriter() {
                     </Card>
                   )}
 
-                  {(article.tags?.length || article.categorySuggestions?.length) && (
-                    <Card>
-                      <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-1"><TagIcon className="h-3 w-3" /> Tags & Categories</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {article.categorySuggestions && article.categorySuggestions.length > 0 && (
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Categories</Label>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {article.categorySuggestions.map((c, i) => <Badge key={i} variant="secondary">{c}</Badge>)}
-                            </div>
+                  <Card>
+                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                      <CardTitle className="text-sm flex items-center gap-1"><TagIcon className="h-3 w-3" /> Tags & Categories</CardTitle>
+                      <Button
+                        size="sm" variant="ghost" className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const s = suggestTagsFromContent(article);
+                          setSuggestedTags(s);
+                          if (s.length === 0) toast({ title: 'No new keyword tags found' });
+                        }}
+                      >
+                        <Sparkles className="h-3 w-3 mr-1" /> Suggest
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {article.categorySuggestions && article.categorySuggestions.length > 0 && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Categories</Label>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {article.categorySuggestions.map((c, i) => <Badge key={i} variant="secondary">{c}</Badge>)}
                           </div>
-                        )}
-                        {article.tags && article.tags.length > 0 && (
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Tags</Label>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {article.tags.map((t, i) => <Badge key={i} variant="outline">#{t}</Badge>)}
-                            </div>
+                        </div>
+                      )}
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Tags</Label>
+                        <div className="flex flex-wrap gap-1 mt-1 min-h-6">
+                          {(article.tags || []).length === 0 && (
+                            <span className="text-[11px] text-muted-foreground">No tags yet — click Suggest.</span>
+                          )}
+                          {(article.tags || []).map((t, i) => (
+                            <Badge
+                              key={i} variant="outline"
+                              className="cursor-pointer hover:bg-destructive/10"
+                              onClick={() => setArticle({ ...article, tags: (article.tags || []).filter((_, x) => x !== i) })}
+                              title="Click to remove"
+                            >
+                              #{t} ×
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      {suggestedTags.length > 0 && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground flex items-center justify-between">
+                            <span>Suggested from content</span>
+                            <button
+                              type="button"
+                              className="text-[11px] text-primary hover:underline"
+                              onClick={() => {
+                                const merged = Array.from(new Set([...(article.tags || []), ...suggestedTags])).slice(0, 12);
+                                setArticle({ ...article, tags: merged });
+                                setSuggestedTags([]);
+                              }}
+                            >
+                              Add all
+                            </button>
+                          </Label>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {suggestedTags.map((t) => (
+                              <button
+                                key={t} type="button"
+                                onClick={() => {
+                                  const merged = Array.from(new Set([...(article.tags || []), t]));
+                                  setArticle({ ...article, tags: merged });
+                                  setSuggestedTags((s) => s.filter((x) => x !== t));
+                                }}
+                                className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md border bg-muted/40 hover:bg-muted"
+                              >
+                                <Plus className="h-3 w-3" /> {t}
+                              </button>
+                            ))}
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </>
@@ -870,6 +1174,45 @@ export default function AIArticleWriter() {
           <DialogFooter>
             <Button variant="outline" onClick={startFresh}>Start fresh</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Version history dialog */}
+      <Dialog open={versionsOpen} onOpenChange={setVersionsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Version history</DialogTitle>
+            <DialogDescription>Restore any previously auto-saved snapshot of this draft.</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">{versions.length} snapshot{versions.length === 1 ? '' : 's'}</p>
+            <Button size="sm" variant="outline" onClick={() => snapshotNow('Manual snapshot')} disabled={!article || !draftId}>
+              <Save className="h-3.5 w-3.5 mr-1" /> Snapshot now
+            </Button>
+          </div>
+          <div className="max-h-80 overflow-y-auto space-y-2 mt-2 relative">
+            {versions.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">No versions yet. They appear automatically as you edit.</p>
+            )}
+            <div className="border-l-2 border-border ml-3 pl-4 space-y-3">
+              {versions.map((v) => (
+                <div key={v.id} className="relative">
+                  <span className="absolute -left-[22px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary" />
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{v.payload?.title || 'Untitled'}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {new Date(v.created_at).toLocaleString()} · {v.label || 'snapshot'}
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => restoreVersion(v)}>
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> Restore
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
