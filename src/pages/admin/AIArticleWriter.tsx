@@ -48,6 +48,7 @@ interface GeneratedArticle {
   categorySuggestions?: string[];
   readTime?: string;
   content: string;
+  ogImage?: string;
 }
 
 interface PlagiarismMatch {
@@ -68,6 +69,13 @@ interface DraftRow {
   title: string;
   payload: GeneratedArticle;
   updated_at: string;
+}
+
+interface VersionRow {
+  id: string;
+  created_at: string;
+  label: string | null;
+  payload: GeneratedArticle;
 }
 
 const SITE_ORIGIN = 'https://cyberomb.lovable.app';
