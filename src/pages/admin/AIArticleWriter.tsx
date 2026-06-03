@@ -1068,29 +1068,82 @@ export default function AIArticleWriter() {
                     </Card>
                   )}
 
-                  {(article.tags?.length || article.categorySuggestions?.length) && (
-                    <Card>
-                      <CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-1"><TagIcon className="h-3 w-3" /> Tags & Categories</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {article.categorySuggestions && article.categorySuggestions.length > 0 && (
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Categories</Label>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {article.categorySuggestions.map((c, i) => <Badge key={i} variant="secondary">{c}</Badge>)}
-                            </div>
+                  <Card>
+                    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                      <CardTitle className="text-sm flex items-center gap-1"><TagIcon className="h-3 w-3" /> Tags & Categories</CardTitle>
+                      <Button
+                        size="sm" variant="ghost" className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const s = suggestTagsFromContent(article);
+                          setSuggestedTags(s);
+                          if (s.length === 0) toast({ title: 'No new keyword tags found' });
+                        }}
+                      >
+                        <Sparkles className="h-3 w-3 mr-1" /> Suggest
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {article.categorySuggestions && article.categorySuggestions.length > 0 && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Categories</Label>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {article.categorySuggestions.map((c, i) => <Badge key={i} variant="secondary">{c}</Badge>)}
                           </div>
-                        )}
-                        {article.tags && article.tags.length > 0 && (
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Tags</Label>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {article.tags.map((t, i) => <Badge key={i} variant="outline">#{t}</Badge>)}
-                            </div>
+                        </div>
+                      )}
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Tags</Label>
+                        <div className="flex flex-wrap gap-1 mt-1 min-h-6">
+                          {(article.tags || []).length === 0 && (
+                            <span className="text-[11px] text-muted-foreground">No tags yet — click Suggest.</span>
+                          )}
+                          {(article.tags || []).map((t, i) => (
+                            <Badge
+                              key={i} variant="outline"
+                              className="cursor-pointer hover:bg-destructive/10"
+                              onClick={() => setArticle({ ...article, tags: (article.tags || []).filter((_, x) => x !== i) })}
+                              title="Click to remove"
+                            >
+                              #{t} ×
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      {suggestedTags.length > 0 && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground flex items-center justify-between">
+                            <span>Suggested from content</span>
+                            <button
+                              type="button"
+                              className="text-[11px] text-primary hover:underline"
+                              onClick={() => {
+                                const merged = Array.from(new Set([...(article.tags || []), ...suggestedTags])).slice(0, 12);
+                                setArticle({ ...article, tags: merged });
+                                setSuggestedTags([]);
+                              }}
+                            >
+                              Add all
+                            </button>
+                          </Label>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {suggestedTags.map((t) => (
+                              <button
+                                key={t} type="button"
+                                onClick={() => {
+                                  const merged = Array.from(new Set([...(article.tags || []), t]));
+                                  setArticle({ ...article, tags: merged });
+                                  setSuggestedTags((s) => s.filter((x) => x !== t));
+                                }}
+                                className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md border bg-muted/40 hover:bg-muted"
+                              >
+                                <Plus className="h-3 w-3" /> {t}
+                              </button>
+                            ))}
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </>
