@@ -262,6 +262,14 @@ export default function AIArticleWriter() {
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
   const [resumeOpen, setResumeOpen] = useState(false);
 
+  // Version history
+  const [versions, setVersions] = useState<VersionRow[]>([]);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const lastVersionAtRef = useRef<number>(0);
+
+  // Tag suggestions
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+
   const startProgress = () => {
     setProgress(8);
     progressTimer.current = setInterval(() => {
