@@ -314,11 +314,12 @@ export default function AIArticleWriter() {
     setSaveStatus('saving');
     autosaveTimer.current = setTimeout(async () => {
       try {
-        if (draftId) {
+        let activeDraftId = draftId;
+        if (activeDraftId) {
           const { error } = await supabase
             .from('ai_writer_drafts')
             .update({ title: article.title || 'Untitled draft', payload: article as never })
-            .eq('id', draftId);
+            .eq('id', activeDraftId);
           if (error) throw error;
         } else {
           const { data, error } = await supabase
@@ -331,10 +332,22 @@ export default function AIArticleWriter() {
             .select('id')
             .single();
           if (error) throw error;
-          setDraftId(data.id);
+          activeDraftId = data.id;
+          setDraftId(activeDraftId);
         }
         setSaveStatus('saved');
         setLastSavedAt(new Date());
+        // Snapshot a version at most once every 60s
+        const now = Date.now();
+        if (activeDraftId && now - lastVersionAtRef.current > 60_000) {
+          lastVersionAtRef.current = now;
+          await supabase.from('ai_writer_draft_versions').insert({
+            draft_id: activeDraftId,
+            user_id: user.id,
+            label: 'Auto-save',
+            payload: article as never,
+          });
+        }
       } catch {
         setSaveStatus('error');
       }
@@ -343,6 +356,40 @@ export default function AIArticleWriter() {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
   }, [article, draftId, user]);
+
+  // Load version list when a draft is active or panel opens
+  const loadVersions = async (id: string) => {
+    const { data } = await supabase
+      .from('ai_writer_draft_versions')
+      .select('id, created_at, label, payload')
+      .eq('draft_id', id)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (data) setVersions(data as unknown as VersionRow[]);
+  };
+  useEffect(() => {
+    if (draftId) loadVersions(draftId);
+    else setVersions([]);
+  }, [draftId]);
+
+  const snapshotNow = async (label: string) => {
+    if (!article || !user || !draftId) return;
+    const { data } = await supabase
+      .from('ai_writer_draft_versions')
+      .insert({ draft_id: draftId, user_id: user.id, label, payload: article as never })
+      .select('id, created_at, label, payload')
+      .single();
+    if (data) {
+      setVersions((v) => [data as unknown as VersionRow, ...v]);
+      lastVersionAtRef.current = Date.now();
+      toast({ title: 'Snapshot saved', description: label });
+    }
+  };
+  const restoreVersion = (v: VersionRow) => {
+    setArticle(v.payload);
+    setVersionsOpen(false);
+    toast({ title: 'Version restored', description: new Date(v.created_at).toLocaleString() });
+  };
 
   const resumeDraft = (d: DraftRow) => {
     setArticle(d.payload);
