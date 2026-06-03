@@ -897,28 +897,127 @@ export default function AIArticleWriter() {
                         <Textarea rows={2} value={article.excerpt}
                           onChange={(e) => setArticle({ ...article, excerpt: e.target.value })} />
                       </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs flex items-center gap-1">
+                          <ImageIcon className="h-3 w-3" /> OG image URL
+                          <span className="text-muted-foreground font-normal">(optional)</span>
+                        </Label>
+                        <Input
+                          value={article.ogImage || ''}
+                          placeholder="https://… or leave blank to use generated preview"
+                          onChange={(e) => setArticle({ ...article, ogImage: e.target.value })}
+                        />
+                      </div>
                     </CardContent>
                   </Card>
 
-                  {/* Publish readiness */}
+                  {/* SEO Checklist with progress */}
+                  {(() => {
+                    const items = buildChecklist(article);
+                    const passed = items.filter((i) => i.ok).length;
+                    const pct = Math.round((passed / items.length) * 100);
+                    const groups: ('Content' | 'SEO' | 'Tags & Slug')[] = ['Content', 'SEO', 'Tags & Slug'];
+                    return (
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm flex items-center justify-between gap-2">
+                            <span className="flex items-center gap-1">
+                              <ListChecks className="h-3 w-3" />
+                              {pct === 100 ? 'Ready to publish' : 'SEO checklist'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{passed}/{items.length}</span>
+                          </CardTitle>
+                          <Progress value={pct} className="h-1.5 mt-2" />
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {groups.map((g) => (
+                            <div key={g}>
+                              <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{g}</div>
+                              <ul className="space-y-1">
+                                {items.filter((i) => i.group === g).map((i) => (
+                                  <li key={i.id} className="flex items-start gap-2 text-xs">
+                                    {i.ok
+                                      ? <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                                      : <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />}
+                                    <span className={i.ok ? 'text-muted-foreground line-through' : ''}>{i.label}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
+
+                  {/* Social media preview */}
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm flex items-center gap-1">
-                        {publishErrors.length === 0
-                          ? <><ShieldCheck className="h-3 w-3 text-emerald-600" /> Ready to publish</>
-                          : <><AlertTriangle className="h-3 w-3 text-amber-500" /> Publish checklist</>}
-                      </CardTitle>
+                      <CardTitle className="text-sm flex items-center gap-1"><Share2 className="h-3 w-3" /> Social preview</CardTitle>
+                      <CardDescription className="text-[11px]">How your link will look when shared.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      {publishErrors.length === 0 ? (
-                        <p className="text-xs text-emerald-600">All required SEO fields, tags, and sections look good.</p>
-                      ) : (
-                        <ul className="text-xs space-y-1 text-muted-foreground">
-                          {publishErrors.map((e, i) => (
-                            <li key={i} className="flex gap-2"><span className="text-destructive">•</span>{e}</li>
-                          ))}
-                        </ul>
-                      )}
+                    <CardContent className="space-y-3">
+                      {(() => {
+                        const ogUrl = article.ogImage && /^https?:\/\//.test(article.ogImage)
+                          ? article.ogImage
+                          : `data:image/svg+xml;utf8,${encodeURIComponent(buildOgSvg(article, 'Cyberom'))}`;
+                        const host = SITE_ORIGIN.replace(/^https?:\/\//, '');
+                        return (
+                          <>
+                            {/* Facebook / LinkedIn style */}
+                            <div className="rounded-lg border overflow-hidden bg-card">
+                              <div className="aspect-[1200/630] bg-muted overflow-hidden">
+                                <img src={ogUrl} alt="OG preview" className="w-full h-full object-cover" />
+                              </div>
+                              <div className="p-3 bg-muted/40 space-y-0.5">
+                                <div className="text-[10px] uppercase text-muted-foreground tracking-wide">{host}</div>
+                                <div className="text-sm font-semibold leading-snug line-clamp-2">{article.metaTitle || article.title}</div>
+                                <div className="text-xs text-muted-foreground line-clamp-2">{article.metaDescription || article.excerpt}</div>
+                              </div>
+                            </div>
+                            {/* Twitter / X style summary_large_image */}
+                            <div className="rounded-2xl border overflow-hidden bg-card">
+                              <div className="aspect-[1200/630] bg-muted overflow-hidden">
+                                <img src={ogUrl} alt="Twitter preview" className="w-full h-full object-cover" />
+                              </div>
+                              <div className="p-3 space-y-0.5">
+                                <div className="text-sm font-semibold leading-snug line-clamp-1">{article.metaTitle || article.title}</div>
+                                <div className="text-xs text-muted-foreground line-clamp-2">{article.metaDescription || article.excerpt}</div>
+                                <div className="text-[11px] text-muted-foreground">🔗 {host}</div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm" variant="outline" className="flex-1"
+                                onClick={() => {
+                                  const svg = buildOgSvg(article, 'Cyberom');
+                                  const blob = new Blob([svg], { type: 'image/svg+xml' });
+                                  const url = URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `${article.slug || 'og-image'}.svg`;
+                                  a.click();
+                                  URL.revokeObjectURL(url);
+                                }}
+                              >
+                                <Download className="h-3.5 w-3.5 mr-1" /> Download OG image
+                              </Button>
+                              {!article.ogImage && (
+                                <Button
+                                  size="sm" variant="secondary"
+                                  onClick={() => {
+                                    const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(buildOgSvg(article, 'Cyberom'))}`;
+                                    setArticle({ ...article, ogImage: dataUrl });
+                                    toast({ title: 'Generated OG image attached' });
+                                  }}
+                                >
+                                  Use generated
+                                </Button>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
 
