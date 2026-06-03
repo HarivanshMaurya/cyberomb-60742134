@@ -600,10 +600,20 @@ export default function AIArticleWriter() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {article && (
+              <div className="px-2.5 py-1 rounded-full border bg-background/60 backdrop-blur">
+                <SaveBadge />
+              </div>
+            )}
+            {article && draftId && (
+              <Button variant="outline" size="sm" onClick={() => setVersionsOpen(true)}>
+                <History className="h-4 w-4 mr-1" /> Versions ({versions.length})
+              </Button>
+            )}
             {drafts.length > 0 && (
               <Button variant="outline" size="sm" onClick={() => setResumeOpen(true)}>
-                <History className="h-4 w-4 mr-1" /> Drafts ({drafts.length})
+                <FileText className="h-4 w-4 mr-1" /> Drafts ({drafts.length})
               </Button>
             )}
             <Badge variant="secondary" className="gap-1"><Wand2 className="h-3 w-3" /> Gemini 2.5</Badge>
