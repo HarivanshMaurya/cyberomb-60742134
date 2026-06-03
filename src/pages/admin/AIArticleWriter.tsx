@@ -123,21 +123,99 @@ interface SectionHistoryEntry {
 }
 
 function validateForPublish(a: GeneratedArticle): string[] {
-  const errs: string[] = [];
-  if (!a.title || a.title.trim().length < 5) errs.push('Title is too short.');
-  if (!a.slug || !/^[a-z0-9-]+$/.test(a.slug)) errs.push('Slug is missing or has invalid characters (use a-z, 0-9, hyphens).');
-  if (!a.metaTitle) errs.push('Meta title is required.');
-  else if (a.metaTitle.length > 60) errs.push('Meta title exceeds 60 characters.');
-  if (!a.metaDescription) errs.push('Meta description is required.');
-  else if (a.metaDescription.length < 50) errs.push('Meta description should be at least 50 characters.');
-  else if (a.metaDescription.length > 160) errs.push('Meta description exceeds 160 characters.');
-  if (!a.excerpt || a.excerpt.trim().length < 20) errs.push('Excerpt is required (at least 20 characters).');
-  if (!a.tags || a.tags.length < 2) errs.push('Add at least 2 tags.');
+  return buildChecklist(a).filter((c) => !c.ok).map((c) => c.label);
+}
+
+type CheckItem = { id: string; label: string; ok: boolean; group: 'SEO' | 'Content' | 'Tags & Slug' };
+
+function buildChecklist(a: GeneratedArticle): CheckItem[] {
   const hasH1 = /<h1[\s>]/i.test(a.content || '');
   const h2Count = (a.content || '').match(/<h2[\s>]/gi)?.length ?? 0;
-  if (!hasH1) errs.push('Content must include an H1.');
-  if (h2Count < 2) errs.push('Content needs at least 2 H2 sections.');
-  return errs;
+  const mt = a.metaTitle || '';
+  const md = a.metaDescription || '';
+  return [
+    { id: 'title', group: 'Content', label: 'Title is at least 5 characters.', ok: !!a.title && a.title.trim().length >= 5 },
+    { id: 'excerpt', group: 'Content', label: 'Excerpt has at least 20 characters.', ok: !!a.excerpt && a.excerpt.trim().length >= 20 },
+    { id: 'h1', group: 'Content', label: 'Content includes an H1.', ok: hasH1 },
+    { id: 'h2', group: 'Content', label: 'Content has at least 2 H2 sections.', ok: h2Count >= 2 },
+    { id: 'mt', group: 'SEO', label: 'Meta title is set and ≤ 60 chars.', ok: !!mt && mt.length <= 60 },
+    { id: 'md', group: 'SEO', label: 'Meta description is 50–160 chars.', ok: md.length >= 50 && md.length <= 160 },
+    { id: 'og', group: 'SEO', label: 'OG image URL is set (optional but recommended).', ok: !!a.ogImage && /^https?:\/\//.test(a.ogImage) },
+    { id: 'slug', group: 'Tags & Slug', label: 'Slug uses a-z, 0-9 and hyphens only.', ok: !!a.slug && /^[a-z0-9-]+$/.test(a.slug) },
+    { id: 'tags', group: 'Tags & Slug', label: 'At least 2 tags added.', ok: (a.tags?.length ?? 0) >= 2 },
+  ];
+}
+
+const STOPWORDS = new Set([
+  'the','and','for','with','that','this','from','have','has','was','were','are','will','your','you','our','their','they',
+  'about','into','onto','than','then','what','when','where','which','while','also','been','being','more','most','some',
+  'such','only','very','just','like','over','under','after','before','because','between','during','these','those','here',
+  'there','make','made','take','taken','using','use','used','can','could','should','would','may','might','one','two','three',
+  'who','how','why','its','it\'s','isn\'t','don\'t','doesn\'t','not','but','any','all','own','out','off','too','via','per',
+  'on','in','to','of','as','at','by','an','a','is','be','or','if','so','do','no','we','i','my','me'
+]);
+
+function suggestTagsFromContent(a: GeneratedArticle): string[] {
+  const text = `${a.title} ${a.metaDescription || ''} ${(a.content || '').replace(/<[^>]+>/g, ' ')}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ');
+  const tokens = text.split(/\s+/).filter((w) => w.length >= 4 && !STOPWORDS.has(w));
+  const freq = new Map<string, number>();
+  for (const t of tokens) freq.set(t, (freq.get(t) || 0) + 1);
+  // bigrams
+  const words = tokens;
+  for (let i = 0; i < words.length - 1; i++) {
+    const bg = `${words[i]} ${words[i + 1]}`;
+    if (bg.length <= 32) freq.set(bg, (freq.get(bg) || 0) + 2);
+  }
+  const existing = new Set((a.tags || []).map((t) => t.toLowerCase()));
+  return Array.from(freq.entries())
+    .filter(([w, c]) => c >= 3 && !existing.has(w))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([w]) => w);
+}
+
+function escapeXml(s: string) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function wrapWords(s: string, maxChars: number, maxLines: number): string[] {
+  const words = s.split(/\s+/);
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    if ((cur + ' ' + w).trim().length > maxChars) {
+      if (cur) lines.push(cur.trim());
+      cur = w;
+      if (lines.length === maxLines - 1) break;
+    } else cur = cur ? cur + ' ' + w : w;
+  }
+  if (cur && lines.length < maxLines) lines.push(cur.trim());
+  return lines;
+}
+function buildOgSvg(a: GeneratedArticle, site: string): string {
+  const title = a.metaTitle || a.title || 'Untitled';
+  const desc = a.metaDescription || a.excerpt || '';
+  const titleLines = wrapWords(title, 28, 3);
+  const descLines = wrapWords(desc, 60, 2);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/><stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c8a97e"/><stop offset="1" stop-color="#e8d5b5"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1080" cy="120" r="260" fill="#c8a97e" opacity="0.07"/>
+  <rect x="70" y="80" width="6" height="60" rx="3" fill="url(#accent)"/>
+  <text x="90" y="118" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="700" fill="#c8a97e" letter-spacing="4">${escapeXml(site.toUpperCase())}</text>
+  ${titleLines.map((l, i) => `<text x="70" y="${230 + i * 64}" font-family="Georgia,serif" font-size="54" font-weight="700" fill="#f8fafc">${escapeXml(l)}</text>`).join('')}
+  ${descLines.map((l, i) => `<text x="70" y="${260 + titleLines.length * 64 + i * 32}" font-family="Inter,Arial,sans-serif" font-size="22" fill="#cbd5e1">${escapeXml(l)}</text>`).join('')}
+  <line x1="70" y1="540" x2="1130" y2="540" stroke="#c8a97e" stroke-opacity="0.25"/>
+  <text x="70" y="585" font-family="Inter,Arial,sans-serif" font-size="20" fill="#94a3b8">${escapeXml((a.tags || []).slice(0, 4).map((t) => '#' + t).join('  '))}</text>
+</svg>`;
 }
 
 export default function AIArticleWriter() {
