@@ -123,7 +123,7 @@ interface SectionHistoryEntry {
 }
 
 function validateForPublish(a: GeneratedArticle): string[] {
-  return buildChecklist(a).filter((c) => !c.ok).map((c) => c.label);
+  return buildChecklist(a).filter((c) => !c.ok && c.id !== 'og').map((c) => c.label);
 }
 
 type CheckItem = { id: string; label: string; ok: boolean; group: 'SEO' | 'Content' | 'Tags & Slug' };
