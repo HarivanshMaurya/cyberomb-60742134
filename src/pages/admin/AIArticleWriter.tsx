@@ -1177,6 +1177,45 @@ export default function AIArticleWriter() {
         </DialogContent>
       </Dialog>
 
+      {/* Version history dialog */}
+      <Dialog open={versionsOpen} onOpenChange={setVersionsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><History className="h-5 w-5" /> Version history</DialogTitle>
+            <DialogDescription>Restore any previously auto-saved snapshot of this draft.</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">{versions.length} snapshot{versions.length === 1 ? '' : 's'}</p>
+            <Button size="sm" variant="outline" onClick={() => snapshotNow('Manual snapshot')} disabled={!article || !draftId}>
+              <Save className="h-3.5 w-3.5 mr-1" /> Snapshot now
+            </Button>
+          </div>
+          <div className="max-h-80 overflow-y-auto space-y-2 mt-2 relative">
+            {versions.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">No versions yet. They appear automatically as you edit.</p>
+            )}
+            <div className="border-l-2 border-border ml-3 pl-4 space-y-3">
+              {versions.map((v) => (
+                <div key={v.id} className="relative">
+                  <span className="absolute -left-[22px] top-1.5 h-2.5 w-2.5 rounded-full bg-primary" />
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{v.payload?.title || 'Untitled'}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {new Date(v.created_at).toLocaleString()} · {v.label || 'snapshot'}
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => restoreVersion(v)}>
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" /> Restore
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Plagiarism dialog */}
       <AlertDialog open={plagOpen} onOpenChange={setPlagOpen}>
         <AlertDialogContent>
