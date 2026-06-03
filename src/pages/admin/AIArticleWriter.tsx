@@ -25,6 +25,7 @@ import {
   Loader2, Copy, FileText, Tag as TagIcon, Languages as LangIcon,
   Cloud, CloudOff, ShieldCheck, ShieldAlert, History, Trash2,
   Undo2, Redo2, ExternalLink, HelpCircle, Link as LinkIcon, AlertTriangle,
+  ListChecks, Share2, Image as ImageIcon, RotateCcw, Plus, Check, Download,
 } from 'lucide-react';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
