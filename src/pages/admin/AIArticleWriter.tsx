@@ -49,6 +49,9 @@ interface GeneratedArticle {
   readTime?: string;
   content: string;
   ogImage?: string;
+  featuredImage?: string;
+  imageCredit?: string;
+  imageSource?: string;
 }
 
 interface PlagiarismMatch {
@@ -411,6 +414,26 @@ export default function AIArticleWriter() {
   };
 
   // -------- Generation --------
+  const fetchAutoImage = async (forArticle: GeneratedArticle): Promise<GeneratedArticle> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-article-image', {
+        body: {
+          topic: forArticle.title || topic,
+          keywords: (forArticle.tags || []).join(', ') || keywords,
+        },
+      });
+      if (error || !data?.ok || !data?.image?.url) return forArticle;
+      return {
+        ...forArticle,
+        featuredImage: data.image.url,
+        imageCredit: data.image.credit || '',
+        imageSource: data.image.source || '',
+      };
+    } catch {
+      return forArticle;
+    }
+  };
+
   const handleGenerate = async () => {
     if (!topic.trim()) {
       toast({ title: 'Topic required', variant: 'destructive' });
@@ -420,10 +443,14 @@ export default function AIArticleWriter() {
     startProgress();
     try {
       const result = await callAI({ topic, keywords, instruction, tone, language, length, mode: 'full' });
-      setArticle(result);
+      const withImage = await fetchAutoImage(result);
+      setArticle(withImage);
       setDraftId(null); // a fresh generation gets a new draft row
       setActiveTab('edit');
-      toast({ title: 'Article generated' });
+      toast({
+        title: 'Article generated',
+        description: withImage.featuredImage ? 'Cover image auto-attached.' : 'Cover image fetch skipped.',
+      });
     } catch (e) {
       toast({ title: 'Generation failed', description: (e as Error).message, variant: 'destructive' });
     } finally {
@@ -560,6 +587,8 @@ export default function AIArticleWriter() {
         read_time: article.readTime || '5 min read',
         meta_title: article.metaTitle,
         meta_description: article.metaDescription,
+        featured_image: article.featuredImage || null,
+        og_image: article.ogImage || article.featuredImage || null,
         published_at: status === 'published' ? new Date().toISOString() : null,
       };
       const { data, error } = await supabase.from('articles').insert(payload).select('id').single();
