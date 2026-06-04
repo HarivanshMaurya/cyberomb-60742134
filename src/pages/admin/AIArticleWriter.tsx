@@ -926,14 +926,59 @@ export default function AIArticleWriter() {
                         <Textarea rows={2} value={article.excerpt}
                           onChange={(e) => setArticle({ ...article, excerpt: e.target.value })} />
                       </div>
+                      <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                        <Label className="text-xs flex items-center gap-1">
+                          <ImageIcon className="h-3 w-3" /> Cover image
+                          <span className="text-muted-foreground font-normal">(auto from free image library)</span>
+                        </Label>
+                        {article.featuredImage ? (
+                          <div className="space-y-2">
+                            <img
+                              src={article.featuredImage}
+                              alt="Cover"
+                              className="w-full aspect-[16/9] object-cover rounded-md border"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0.3'; }}
+                            />
+                            {article.imageCredit && (
+                              <p className="text-[10px] text-muted-foreground truncate">{article.imageCredit}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-muted-foreground">No image attached yet.</div>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            type="button" size="sm" variant="outline" className="text-xs h-7"
+                            disabled={actionLoading === 'image'}
+                            onClick={async () => {
+                              setActionLoading('image');
+                              const updated = await fetchAutoImage(article);
+                              setArticle(updated);
+                              setActionLoading(null);
+                              toast({
+                                title: updated.featuredImage !== article.featuredImage ? 'New cover image attached' : 'No new image found',
+                              });
+                            }}
+                          >
+                            {actionLoading === 'image' ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ImageIcon className="h-3 w-3 mr-1" />}
+                            {article.featuredImage ? 'Get different image' : 'Auto-fetch image'}
+                          </Button>
+                        </div>
+                        <Input
+                          value={article.featuredImage || ''}
+                          placeholder="Or paste any image URL"
+                          className="text-xs h-7"
+                          onChange={(e) => setArticle({ ...article, featuredImage: e.target.value })}
+                        />
+                      </div>
                       <div className="space-y-1">
                         <Label className="text-xs flex items-center gap-1">
                           <ImageIcon className="h-3 w-3" /> OG image URL
-                          <span className="text-muted-foreground font-normal">(optional)</span>
+                          <span className="text-muted-foreground font-normal">(optional override)</span>
                         </Label>
                         <Input
                           value={article.ogImage || ''}
-                          placeholder="https://… or leave blank to use generated preview"
+                          placeholder="https://… leave blank to reuse cover image"
                           onChange={(e) => setArticle({ ...article, ogImage: e.target.value })}
                         />
                       </div>
