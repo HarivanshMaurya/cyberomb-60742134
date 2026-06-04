@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { BookPage } from "./useBookPagination";
 import React, { useRef, useEffect } from "react";
 
