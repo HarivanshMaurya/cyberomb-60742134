@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { BookPage } from "./useBookPagination";
 import React, { useRef, useEffect } from "react";
 
@@ -122,7 +123,7 @@ export function BookPageView({
               '--tw-prose-quote-borders': chapterAccent,
             } as React.CSSProperties : {}),
           }}
-          dangerouslySetInnerHTML={{ __html: page.content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.content) }}
         />
       </div>
 

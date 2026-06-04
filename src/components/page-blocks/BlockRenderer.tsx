@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { PageBlock, BlockStyleSettings, DEFAULT_STYLE, BlockAnimation } from '@/components/admin/page-builder/types';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -115,7 +116,7 @@ function RichTextRenderer({ block }: { block: any }) {
     <section className="max-w-3xl mx-auto px-6 py-16 md:py-24">
       <div
         className="prose prose-lg dark:prose-invert max-w-none prose-headings:font-serif prose-headings:tracking-tight prose-a:text-accent prose-a:no-underline hover:prose-a:underline"
-        dangerouslySetInnerHTML={{ __html: block.content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }}
       />
     </section>
   );
@@ -142,7 +143,7 @@ function TextImageRenderer({ block }: { block: any }) {
         <div className="flex-1">
           <div
             className="prose prose-lg dark:prose-invert max-w-none prose-headings:font-serif prose-headings:tracking-tight"
-            dangerouslySetInnerHTML={{ __html: block.text }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.text) }}
           />
         </div>
       </div>

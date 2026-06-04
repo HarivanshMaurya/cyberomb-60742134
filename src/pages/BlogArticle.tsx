@@ -1,3 +1,4 @@
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { useState, useCallback } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -207,7 +208,7 @@ const BlogArticle = () => {
               ) : displayContent ? (
                 <div 
                   className="prose prose-lg max-w-none mb-16 animate-slide-up stagger-2"
-                  dangerouslySetInnerHTML={{ __html: displayContent }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(displayContent) }}
                 />
               ) : null}
 
