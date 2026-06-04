@@ -49,6 +49,9 @@ interface GeneratedArticle {
   readTime?: string;
   content: string;
   ogImage?: string;
+  featuredImage?: string;
+  imageCredit?: string;
+  imageSource?: string;
 }
 
 interface PlagiarismMatch {
@@ -411,6 +414,26 @@ export default function AIArticleWriter() {
   };
 
   // -------- Generation --------
+  const fetchAutoImage = async (forArticle: GeneratedArticle): Promise<GeneratedArticle> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-article-image', {
+        body: {
+          topic: forArticle.title || topic,
+          keywords: (forArticle.tags || []).join(', ') || keywords,
+        },
+      });
+      if (error || !data?.ok || !data?.image?.url) return forArticle;
+      return {
+        ...forArticle,
+        featuredImage: data.image.url,
+        imageCredit: data.image.credit || '',
+        imageSource: data.image.source || '',
+      };
+    } catch {
+      return forArticle;
+    }
+  };
+
   const handleGenerate = async () => {
     if (!topic.trim()) {
       toast({ title: 'Topic required', variant: 'destructive' });
@@ -420,10 +443,14 @@ export default function AIArticleWriter() {
     startProgress();
     try {
       const result = await callAI({ topic, keywords, instruction, tone, language, length, mode: 'full' });
-      setArticle(result);
+      const withImage = await fetchAutoImage(result);
+      setArticle(withImage);
       setDraftId(null); // a fresh generation gets a new draft row
       setActiveTab('edit');
-      toast({ title: 'Article generated' });
+      toast({
+        title: 'Article generated',
+        description: withImage.featuredImage ? 'Cover image auto-attached.' : 'Cover image fetch skipped.',
+      });
     } catch (e) {
       toast({ title: 'Generation failed', description: (e as Error).message, variant: 'destructive' });
     } finally {
@@ -560,6 +587,8 @@ export default function AIArticleWriter() {
         read_time: article.readTime || '5 min read',
         meta_title: article.metaTitle,
         meta_description: article.metaDescription,
+        featured_image: article.featuredImage || null,
+        og_image: article.ogImage || article.featuredImage || null,
         published_at: status === 'published' ? new Date().toISOString() : null,
       };
       const { data, error } = await supabase.from('articles').insert(payload).select('id').single();
@@ -897,14 +926,59 @@ export default function AIArticleWriter() {
                         <Textarea rows={2} value={article.excerpt}
                           onChange={(e) => setArticle({ ...article, excerpt: e.target.value })} />
                       </div>
+                      <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                        <Label className="text-xs flex items-center gap-1">
+                          <ImageIcon className="h-3 w-3" /> Cover image
+                          <span className="text-muted-foreground font-normal">(auto from free image library)</span>
+                        </Label>
+                        {article.featuredImage ? (
+                          <div className="space-y-2">
+                            <img
+                              src={article.featuredImage}
+                              alt="Cover"
+                              className="w-full aspect-[16/9] object-cover rounded-md border"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.opacity = '0.3'; }}
+                            />
+                            {article.imageCredit && (
+                              <p className="text-[10px] text-muted-foreground truncate">{article.imageCredit}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-muted-foreground">No image attached yet.</div>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            type="button" size="sm" variant="outline" className="text-xs h-7"
+                            disabled={actionLoading === 'image'}
+                            onClick={async () => {
+                              setActionLoading('image');
+                              const updated = await fetchAutoImage(article);
+                              setArticle(updated);
+                              setActionLoading(null);
+                              toast({
+                                title: updated.featuredImage !== article.featuredImage ? 'New cover image attached' : 'No new image found',
+                              });
+                            }}
+                          >
+                            {actionLoading === 'image' ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ImageIcon className="h-3 w-3 mr-1" />}
+                            {article.featuredImage ? 'Get different image' : 'Auto-fetch image'}
+                          </Button>
+                        </div>
+                        <Input
+                          value={article.featuredImage || ''}
+                          placeholder="Or paste any image URL"
+                          className="text-xs h-7"
+                          onChange={(e) => setArticle({ ...article, featuredImage: e.target.value })}
+                        />
+                      </div>
                       <div className="space-y-1">
                         <Label className="text-xs flex items-center gap-1">
                           <ImageIcon className="h-3 w-3" /> OG image URL
-                          <span className="text-muted-foreground font-normal">(optional)</span>
+                          <span className="text-muted-foreground font-normal">(optional override)</span>
                         </Label>
                         <Input
                           value={article.ogImage || ''}
-                          placeholder="https://… or leave blank to use generated preview"
+                          placeholder="https://… leave blank to reuse cover image"
                           onChange={(e) => setArticle({ ...article, ogImage: e.target.value })}
                         />
                       </div>

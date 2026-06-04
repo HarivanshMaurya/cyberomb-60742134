@@ -110,45 +110,74 @@ Deno.serve(async (req) => {
       });
     }
 
-    const aiRes = await fetch(LOVABLE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: buildSystemPrompt(body) },
-          { role: 'user', content: buildUserPrompt(body) },
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    });
+    // Try primary model, then fall back to a different model on transient errors / bad JSON
+    const models = ['google/gemini-2.5-flash', 'google/gemini-2.5-flash-lite', 'google/gemini-2.5-pro'];
+    let lastErr = '';
+    let parsed: Record<string, unknown> | null = null;
 
-    if (aiRes.status === 429) {
-      return new Response(JSON.stringify({ error: 'Rate limit reached. Please try again shortly.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    for (const model of models) {
+      // Retry the same model up to 2 times on 429 / 5xx
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const aiRes = await fetch(LOVABLE_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: buildSystemPrompt(body) },
+              { role: 'user', content: buildUserPrompt(body) },
+            ],
+            response_format: { type: 'json_object' },
+          }),
+        });
+
+        if (aiRes.status === 402) {
+          return new Response(JSON.stringify({ error: 'AI credits exhausted. Add credits in Workspace Settings.' }),
+            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        if (aiRes.status === 429 || aiRes.status >= 500) {
+          lastErr = `Model ${model} returned ${aiRes.status}`;
+          await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+          continue; // retry same model
+        }
+        if (!aiRes.ok) {
+          lastErr = await aiRes.text();
+          break; // hard error → try next model
+        }
+
+        const aiJson = await aiRes.json().catch(() => null);
+        const raw: string = aiJson?.choices?.[0]?.message?.content ?? '';
+        if (!raw) {
+          lastErr = 'Empty AI response';
+          break;
+        }
+        // Robust JSON extraction
+        const cleaned = raw
+          .replace(/^\s*```(?:json)?/i, '')
+          .replace(/```\s*$/i, '')
+          .trim();
+        try {
+          parsed = JSON.parse(cleaned);
+        } catch {
+          const m = cleaned.match(/\{[\s\S]*\}/);
+          if (m) {
+            try { parsed = JSON.parse(m[0]); } catch { /* still bad */ }
+          }
+        }
+        if (parsed && (parsed.content || parsed.title)) break; // success
+        lastErr = 'AI returned unparsable content';
+        parsed = null;
+        break; // try next model
+      }
+      if (parsed) break;
     }
-    if (aiRes.status === 402) {
-      return new Response(JSON.stringify({ error: 'AI credits exhausted. Add credits in Workspace Settings.' }),
-        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-    if (!aiRes.ok) {
-      const errText = await aiRes.text();
-      return new Response(JSON.stringify({ error: 'AI gateway error', detail: errText }),
+
+    if (!parsed) {
+      return new Response(JSON.stringify({ error: 'AI generation failed', detail: lastErr }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    const aiJson = await aiRes.json();
-    const raw = aiJson?.choices?.[0]?.message?.content ?? '';
-    let parsed: Record<string, unknown> = {};
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      // try to extract a JSON object
-      const m = raw.match(/\{[\s\S]*\}/);
-      parsed = m ? JSON.parse(m[0]) : { content: raw };
     }
 
     return new Response(JSON.stringify({ ok: true, article: parsed }), {
