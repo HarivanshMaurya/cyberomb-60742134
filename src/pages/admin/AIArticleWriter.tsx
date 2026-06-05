@@ -273,6 +273,25 @@ export default function AIArticleWriter() {
   // Tag suggestions
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
 
+  // Image diagnostics + inline image registry (for swap/remove UI)
+  interface InlineImageEntry {
+    id: string;          // stable slot id, e.g. "inline-1"
+    query: string;       // current search query
+    url?: string;        // current image url (empty if removed/failed)
+    credit?: string;
+    score?: number;
+    status: 'ok' | 'fallback' | 'failed' | 'empty';
+  }
+  interface ImageFetchLog {
+    slot: number; baseQuery: string; status: string; picked?: string; pickedScore?: number;
+    attempts: { query: string; provider: string; candidates: number; topScore: number; picked?: string; error?: string }[];
+  }
+  const [inlineImages, setInlineImages] = useState<InlineImageEntry[]>([]);
+  const [imageLogs, setImageLogs] = useState<ImageFetchLog[]>([]);
+  const [coverLog, setCoverLog] = useState<ImageFetchLog | null>(null);
+  const [swapBusy, setSwapBusy] = useState<string | null>(null);
+  const swapDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   const startProgress = () => {
     setProgress(8);
     progressTimer.current = setInterval(() => {
