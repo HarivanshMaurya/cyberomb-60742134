@@ -76,7 +76,6 @@ Rules for "content" HTML:
 - INLINE IMAGE SLOTS (mandatory): insert EXACTLY 4 image placeholders, spaced evenly through the body (roughly after sections 1, 3, 5, and before FAQs). Each placeholder MUST be of this exact form and nothing else — the platform will replace them with real images:
   <figure data-img-slot="1" data-img-query="SHORT VISUAL SEARCH QUERY HERE"></figure>
   The data-img-query MUST be a concrete, photographable noun phrase (3-6 words) tied to that section's topic — e.g. "woman meditating sunrise beach" not "mindfulness concept". Number slots 1, 2, 3, 4 in order. Do NOT add <img> tags yourself.
-  The data-img-query MUST be a concrete, photographable noun phrase (3-6 words) tied to that section's topic — e.g. "woman meditating sunrise beach" not "mindfulness concept". Number slots 1, 2, 3 in order. Do NOT add <img> tags yourself.
 - Use <p>, <ul>/<ol>, <strong>, <em>, <blockquote>, <h2>, <h3>, <figure data-img-slot data-img-query> only. NO inline styles. NO <html>/<body>. NO markdown. NO real <img> tags (cover image and inline images are added separately).
 - Target length: ${len}.
 - Tone: ${tone}. Language: ${lang}${lang === 'Hinglish' ? ' (natural Hindi + English mix in Roman script, like a real desi blogger talking to a friend)' : ''}.
