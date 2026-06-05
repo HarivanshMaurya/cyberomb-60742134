@@ -1098,7 +1098,79 @@ export default function AIArticleWriter() {
                           className="text-xs h-7"
                           onChange={(e) => setArticle({ ...article, featuredImage: e.target.value })}
                         />
+                        {coverLog && (
+                          <details className="text-[10px] text-muted-foreground">
+                            <summary className="cursor-pointer">Cover fetch log ({coverLog.status})</summary>
+                            <div className="mt-1 space-y-0.5 max-h-32 overflow-auto">
+                              {coverLog.attempts.map((a, i) => (
+                                <div key={i} className="font-mono">
+                                  "{a.query}" → {a.candidates} cands, top {a.topScore.toFixed(2)}{a.error ? ` ⚠ ${a.error}` : ''}
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
                       </div>
+
+                      {/* Inline images registry */}
+                      {inlineImages.length > 0 && (
+                        <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                          <Label className="text-xs flex items-center gap-1">
+                            <ImageIcon className="h-3 w-3" /> Inline images
+                            <span className="text-muted-foreground font-normal">
+                              ({inlineImages.filter((e) => e.url).length}/{inlineImages.length} found)
+                            </span>
+                          </Label>
+                          {inlineImages.map((entry) => (
+                            <div key={entry.id} className="flex gap-2 items-start rounded border bg-background p-2">
+                              {entry.url ? (
+                                <img src={entry.url} alt="" className="w-16 h-16 object-cover rounded shrink-0" />
+                              ) : (
+                                <div className="w-16 h-16 rounded bg-muted flex items-center justify-center text-[9px] text-muted-foreground shrink-0">empty</div>
+                              )}
+                              <div className="flex-1 min-w-0 space-y-1">
+                                <div className="text-[10px] font-mono text-muted-foreground truncate">{entry.query}</div>
+                                <div className="text-[9px] text-muted-foreground">
+                                  {entry.status}
+                                  {typeof entry.score === 'number' ? ` · score ${entry.score.toFixed(2)}` : ''}
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button
+                                    type="button" size="sm" variant="outline" className="h-6 px-2 text-[10px]"
+                                    disabled={swapBusy === entry.id}
+                                    onClick={() => swapInlineImage(entry.id)}
+                                  >
+                                    {swapBusy === entry.id ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : 'Swap'}
+                                  </Button>
+                                  <Button
+                                    type="button" size="sm" variant="ghost" className="h-6 px-2 text-[10px]"
+                                    onClick={() => removeInlineImage(entry.id)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {imageLogs.length > 0 && (
+                            <details className="text-[10px] text-muted-foreground">
+                              <summary className="cursor-pointer">Inline fetch diagnostics</summary>
+                              <div className="mt-1 space-y-2 max-h-48 overflow-auto">
+                                {imageLogs.map((log, i) => (
+                                  <div key={i} className="border-l-2 border-muted pl-2">
+                                    <div className="font-semibold">Slot {log.slot} — {log.status}</div>
+                                    {log.attempts.map((a, j) => (
+                                      <div key={j} className="font-mono">
+                                        "{a.query}" → {a.candidates}, top {a.topScore.toFixed(2)}{a.error ? ` ⚠ ${a.error}` : ''}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          )}
+                        </div>
+                      )}
                       <div className="space-y-1">
                         <Label className="text-xs flex items-center gap-1">
                           <ImageIcon className="h-3 w-3" /> OG image URL
