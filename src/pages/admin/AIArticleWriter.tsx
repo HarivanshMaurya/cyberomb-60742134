@@ -441,6 +441,7 @@ export default function AIArticleWriter() {
           keywords: (forArticle.tags || []).join(', ') || keywords,
         },
       });
+      if (data?.log) setCoverLog(data.log as ImageFetchLog);
       if (error || !data?.ok || !data?.image?.url) return forArticle;
       return {
         ...forArticle,
@@ -448,23 +449,31 @@ export default function AIArticleWriter() {
         imageCredit: data.image.credit || '',
         imageSource: data.image.source || '',
       };
-    } catch {
+    } catch (e) {
+      console.warn('[fetchAutoImage] failed', e);
       return forArticle;
     }
   };
 
-  // Find <figure data-img-slot="N" data-img-query="..."></figure> placeholders
-  // in the generated HTML, fetch one unique relevant image per slot, and swap
-  // them in. Excludes URLs already in use (DB + featured image just attached).
+  const renderInlineFigure = (entry: InlineImageEntry): string => {
+    if (!entry.url) return '';
+    const safeAlt = entry.query.replace(/"/g, '&quot;');
+    const credit = entry.credit ? `<figcaption class="text-xs text-muted-foreground mt-2 text-center italic">${entry.credit}</figcaption>` : '';
+    return `<figure class="my-8" data-inline-id="${entry.id}" data-img-query="${safeAlt}"><img src="${entry.url}" alt="${safeAlt}" loading="lazy" class="w-full rounded-lg shadow-md" />${credit}</figure>`;
+  };
+
+  // Find <figure data-img-slot="N" data-img-query="..."></figure> placeholders,
+  // fetch one unique relevant image per slot, replace with a real <figure>
+  // tagged with data-inline-id so the user can later swap/remove it.
   const injectInlineImages = async (forArticle: GeneratedArticle): Promise<GeneratedArticle> => {
     if (!forArticle.content) return forArticle;
     const slotRe = /<figure[^>]*data-img-slot=["']?(\d+)["']?[^>]*data-img-query=["']([^"']+)["'][^>]*>\s*<\/figure>/gi;
-    const slots: { full: string; query: string }[] = [];
+    const slots: { full: string; slotNum: string; query: string }[] = [];
     let m: RegExpExecArray | null;
     while ((m = slotRe.exec(forArticle.content)) !== null) {
-      slots.push({ full: m[0], query: m[2] });
+      slots.push({ full: m[0], slotNum: m[1], query: m[2] });
     }
-    if (!slots.length) return forArticle;
+    if (!slots.length) { setInlineImages([]); setImageLogs([]); return forArticle; }
     try {
       const { data, error } = await supabase.functions.invoke('fetch-article-image', {
         body: {
@@ -474,20 +483,82 @@ export default function AIArticleWriter() {
           excludeUrls: forArticle.featuredImage ? [forArticle.featuredImage] : [],
         },
       });
+      if (data?.logs) setImageLogs(data.logs as ImageFetchLog[]);
       if (error || !data?.ok || !Array.isArray(data.images)) return forArticle;
       let content = forArticle.content;
+      const entries: InlineImageEntry[] = [];
       slots.forEach((slot, i) => {
         const img = data.images[i];
-        const replacement = img?.url
-          ? `<figure class="my-6"><img src="${img.url}" alt="${slot.query.replace(/"/g, '&quot;')}" loading="lazy" class="w-full rounded-lg" />${img.credit ? `<figcaption class="text-xs text-muted-foreground mt-1">${img.credit}</figcaption>` : ''}</figure>`
-          : '';
-        content = content.replace(slot.full, replacement);
+        const log = data.logs?.[i];
+        const entry: InlineImageEntry = {
+          id: `inline-${slot.slotNum}`,
+          query: slot.query,
+          url: img?.url || '',
+          credit: img?.credit || '',
+          score: img?.score,
+          status: !img ? 'failed' : (log?.status || 'ok'),
+        };
+        entries.push(entry);
+        content = content.replace(slot.full, renderInlineFigure(entry));
       });
+      setInlineImages(entries);
       return { ...forArticle, content };
-    } catch {
+    } catch (e) {
+      console.warn('[injectInlineImages] failed', e);
       return forArticle;
     }
   };
+
+  // Swap or remove a specific inline image, updating both the registry and the
+  // article HTML in place. Debounced per-id to coalesce rapid clicks.
+  const swapInlineImage = (id: string) => {
+    if (swapDebounceRef.current[id]) clearTimeout(swapDebounceRef.current[id]);
+    swapDebounceRef.current[id] = setTimeout(async () => {
+      if (!article) return;
+      const entry = inlineImages.find((e) => e.id === id);
+      if (!entry) return;
+      setSwapBusy(id);
+      try {
+        const used = [
+          article.featuredImage || '',
+          ...inlineImages.map((e) => e.url || ''),
+        ].filter(Boolean);
+        const { data } = await supabase.functions.invoke('fetch-article-image', {
+          body: {
+            topic: article.title || topic,
+            keywords: (article.tags || []).join(', ') || keywords,
+            queries: [entry.query],
+            excludeUrls: used,
+          },
+        });
+        const img = data?.images?.[0];
+        if (!img?.url) {
+          toast({ title: 'No new image found', variant: 'destructive' });
+          return;
+        }
+        const next: InlineImageEntry = {
+          ...entry, url: img.url, credit: img.credit || '', score: img.score,
+          status: (data?.logs?.[0]?.status as InlineImageEntry['status']) || 'ok',
+        };
+        setInlineImages((arr) => arr.map((e) => (e.id === id ? next : e)));
+        // Replace existing <figure data-inline-id="id">...</figure> in content
+        const re = new RegExp(`<figure[^>]*data-inline-id=["']${id}["'][^>]*>[\\s\\S]*?<\\/figure>`, 'i');
+        setArticle((a) => a ? { ...a, content: a.content.replace(re, renderInlineFigure(next)) } : a);
+        toast({ title: 'Image swapped' });
+      } finally {
+        setSwapBusy(null);
+      }
+    }, 200);
+  };
+
+  const removeInlineImage = (id: string) => {
+    if (!article) return;
+    const re = new RegExp(`<figure[^>]*data-inline-id=["']${id}["'][^>]*>[\\s\\S]*?<\\/figure>`, 'i');
+    setArticle((a) => a ? { ...a, content: a.content.replace(re, '') } : a);
+    setInlineImages((arr) => arr.map((e) => (e.id === id ? { ...e, url: '', status: 'empty' } : e)));
+  };
+
+
 
 
   const handleGenerate = async () => {
