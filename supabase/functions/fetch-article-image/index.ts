@@ -1,8 +1,9 @@
-// Auto-fetch a unique, topic-relevant image for an article (no API key required).
-// Tries Openverse (CC images, includes Flickr/Wikimedia/etc.), falls back to
-// Wikimedia Commons search. Verifies uniqueness against every image already
-// used in any article (by URL and by normalized filename/ID), and automatically
-// refines the search using topic + keywords with multiple query strategies.
+// Auto-fetch unique, topic-relevant images for an article (no API key required).
+// Sources: Openverse (CC, includes Flickr/Wikimedia/etc.) + Wikimedia Commons.
+// Returns either a single best image or a batch of N unique images (for inline
+// usage). Results are SCORED by how well each candidate's title/tags overlap
+// the search query, so the picked image actually matches the topic instead of
+// being the first random hit.
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -10,6 +11,11 @@ interface Body {
   topic: string;
   keywords?: string;
   excludeUrls?: string[];
+  // When set, return up to `count` unique images (for inline article use).
+  // When omitted, returns a single best image (back-compat for cover fetch).
+  count?: number;
+  // Optional list of per-slot queries to fetch tailored inline images for.
+  queries?: string[];
 }
 
 interface ImageResult {
@@ -19,12 +25,31 @@ interface ImageResult {
   creator?: string;
   credit?: string;
   provider: 'openverse' | 'wikimedia';
+  score?: number;
+  query?: string;
 }
 
-// Normalize a URL to a stable fingerprint so two URLs pointing at the same
-// underlying image (different CDN params, different thumb sizes, etc.) still
-// collide. We strip the query string and reduce to the last path segment
-// without size suffixes like "-1600px" or "/640px-".
+const STOP = new Set([
+  'the','a','an','and','or','of','in','to','for','how','why','what','is','with',
+  'on','at','by','from','your','my','best','top','guide','tips','vs','&',
+]);
+
+function tokens(s: string): string[] {
+  return (s || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP.has(w));
+}
+
+function scoreCandidate(queryTokens: string[], text: string): number {
+  if (!queryTokens.length) return 0;
+  const t = (text || '').toLowerCase();
+  let hits = 0;
+  for (const q of queryTokens) if (t.includes(q)) hits++;
+  return hits / queryTokens.length;
+}
+
 function fingerprint(url: string): string {
   try {
     const u = new URL(url);
@@ -40,82 +65,92 @@ function fingerprint(url: string): string {
 
 function buildQueries(b: Body): string[] {
   const topic = (b.topic || '').trim();
-  const kws = (b.keywords || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
+  const kws = (b.keywords || '').split(',').map((s) => s.trim()).filter(Boolean);
   const queries: string[] = [];
-  // 1. Most specific: topic + first 2 keywords
   if (topic && kws.length) queries.push(`${topic} ${kws.slice(0, 2).join(' ')}`);
-  // 2. Topic + single strongest keyword
   if (topic && kws[0]) queries.push(`${topic} ${kws[0]}`);
-  // 3. Just the topic
   if (topic) queries.push(topic);
-  // 4. Each keyword as fallback
   for (const k of kws.slice(0, 3)) queries.push(k);
-  // 5. Topic minus stopwords (last resort)
   if (topic) {
-    const stop = new Set(['the', 'a', 'an', 'and', 'or', 'of', 'in', 'to', 'for', 'how', 'why', 'what', 'is', 'with']);
-    const stripped = topic.split(/\s+/).filter((w) => !stop.has(w.toLowerCase())).join(' ');
+    const stripped = topic.split(/\s+/).filter((w) => !STOP.has(w.toLowerCase())).join(' ');
     if (stripped && stripped !== topic) queries.push(stripped);
   }
   return Array.from(new Set(queries)).filter(Boolean);
 }
 
-async function searchOpenverse(query: string, exclude: Set<string>): Promise<ImageResult | null> {
+async function searchOpenverseAll(query: string): Promise<ImageResult[]> {
   try {
     const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=40&license_type=commercial&mature=false`;
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'CyberomCMS/1.0 (admin auto image)' },
-    });
-    if (!res.ok) return null;
+    const res = await fetch(url, { headers: { 'User-Agent': 'CyberomCMS/1.0' } });
+    if (!res.ok) return [];
     const data = await res.json();
     const results: any[] = Array.isArray(data?.results) ? data.results : [];
-    const shuffled = results.sort(() => Math.random() - 0.5);
-    for (const r of shuffled) {
-      const u: string = r?.url || '';
-      if (!u || !/^https?:\/\//.test(u)) continue;
-      if (exclude.has(u) || exclude.has(fingerprint(u))) continue;
-      return {
-        url: u,
-        thumbnail: r?.thumbnail || u,
-        source: r?.foreign_landing_url || r?.source || '',
-        creator: r?.creator || '',
-        credit: `Photo by ${r?.creator || 'Unknown'} on ${r?.source || 'Openverse'}`,
-        provider: 'openverse',
-      };
-    }
-  } catch (_e) { /* fall through */ }
-  return null;
+    return results.map((r) => ({
+      url: r?.url || '',
+      thumbnail: r?.thumbnail || r?.url || '',
+      source: r?.foreign_landing_url || r?.source || '',
+      creator: r?.creator || '',
+      credit: `Photo by ${r?.creator || 'Unknown'} on ${r?.source || 'Openverse'}`,
+      provider: 'openverse' as const,
+      _text: `${r?.title || ''} ${(r?.tags || []).map((t: any) => t?.name || t).join(' ')}`,
+    })) as any;
+  } catch { return []; }
 }
 
-async function searchWikimedia(query: string, exclude: Set<string>): Promise<ImageResult | null> {
+async function searchWikimediaAll(query: string): Promise<ImageResult[]> {
   try {
     const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(query)}&gsrlimit=40&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=1600&format=json&origin=*`;
     const res = await fetch(url, { headers: { 'User-Agent': 'CyberomCMS/1.0' } });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const data = await res.json();
     const pages = data?.query?.pages ? Object.values<any>(data.query.pages) : [];
-    const shuffled = pages.sort(() => Math.random() - 0.5);
-    for (const p of shuffled) {
+    return pages.map((p) => {
       const info = p?.imageinfo?.[0];
       const u: string = info?.thumburl || info?.url || '';
-      if (!u || !/^https?:\/\//.test(u)) continue;
-      if (!/\.(jpe?g|png|webp|gif)(\?|$)/i.test(u)) continue;
-      if (exclude.has(u) || exclude.has(fingerprint(u))) continue;
       const meta = info?.extmetadata || {};
       const artist = (meta?.Artist?.value || '').replace(/<[^>]+>/g, '').trim();
+      const desc = (meta?.ImageDescription?.value || '').replace(/<[^>]+>/g, '').trim();
       return {
         url: u,
         thumbnail: info?.thumburl || u,
         source: info?.descriptionurl || 'https://commons.wikimedia.org',
         creator: artist || 'Wikimedia Commons',
         credit: `Image via Wikimedia Commons${artist ? ` — ${artist}` : ''}`,
-        provider: 'wikimedia',
+        provider: 'wikimedia' as const,
+        _text: `${p?.title || ''} ${desc}`,
       };
-    }
-  } catch (_e) { /* fall through */ }
+    }).filter((r: any) => r.url && /\.(jpe?g|png|webp|gif)(\?|$)/i.test(r.url)) as any;
+  } catch { return []; }
+}
+
+async function findBestImage(query: string, exclude: Set<string>): Promise<ImageResult | null> {
+  const qTok = tokens(query);
+  const candidates: any[] = [];
+  candidates.push(...await searchOpenverseAll(query));
+  candidates.push(...await searchWikimediaAll(query));
+
+  const scored = candidates
+    .filter((c) => c.url && /^https?:\/\//.test(c.url))
+    .filter((c) => !exclude.has(c.url) && !exclude.has(fingerprint(c.url)))
+    .map((c) => ({ ...c, score: scoreCandidate(qTok, c._text) }))
+    .sort((a, b) => b.score - a.score);
+
+  // Prefer strong matches; if none scored, fall back to first available
+  const best = scored.find((c) => c.score >= 0.5) || scored.find((c) => c.score > 0) || scored[0];
+  if (!best) return null;
+  return {
+    url: best.url, thumbnail: best.thumbnail, source: best.source,
+    creator: best.creator, credit: best.credit, provider: best.provider,
+    score: best.score, query,
+  };
+}
+
+async function fetchOne(b: Body, exclude: Set<string>, customQuery?: string): Promise<ImageResult | null> {
+  const queries = customQuery ? [customQuery, ...buildQueries(b)] : buildQueries(b);
+  for (const q of queries) {
+    const img = await findBestImage(q, exclude);
+    if (img) return img;
+  }
   return null;
 }
 
@@ -145,15 +180,12 @@ Deno.serve(async (req) => {
     }
 
     const body = (await req.json().catch(() => ({}))) as Body;
-    if (!body?.topic) {
-      return new Response(JSON.stringify({ error: 'Topic required' }), {
+    if (!body?.topic && !(body?.queries?.length)) {
+      return new Response(JSON.stringify({ error: 'Topic or queries required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Build exclusion set: caller-passed URLs + every featured_image / og_image
-    // already attached to any article. Add both the raw URL and its fingerprint
-    // so resized/CDN variants of the same source image still get rejected.
     const admin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -170,7 +202,6 @@ Deno.serve(async (req) => {
         if (v) { exclude.add(v); exclude.add(fingerprint(v)); }
       }
     }
-    // Also check wellness_articles if that table has a featured_image column
     try {
       const { data: usedWell } = await admin
         .from('wellness_articles').select('featured_image').limit(2000);
@@ -178,24 +209,36 @@ Deno.serve(async (req) => {
         const v = (r as Record<string, string | null>)?.featured_image;
         if (v) { exclude.add(v); exclude.add(fingerprint(v)); }
       }
-    } catch { /* table may not exist or have column; ignore */ }
+    } catch { /* ignore */ }
 
-    // Try every refined query, on both providers, until we find a unique match
-    const queries = buildQueries(body);
-    let image: ImageResult | null = null;
-    for (const q of queries) {
-      image = await searchOpenverse(q, exclude);
-      if (image) break;
-      image = await searchWikimedia(q, exclude);
-      if (image) break;
+    // Batch mode — per-slot queries OR count
+    if (body.queries?.length || (body.count && body.count > 1)) {
+      const slotQueries: (string | undefined)[] = body.queries?.length
+        ? body.queries
+        : Array.from({ length: body.count || 3 }, () => undefined);
+      const images: ImageResult[] = [];
+      for (const sq of slotQueries) {
+        const img = await fetchOne(body, exclude, sq);
+        if (img) {
+          images.push(img);
+          exclude.add(img.url);
+          exclude.add(fingerprint(img.url));
+        } else {
+          images.push(null as any);
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, images }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
+    // Single image mode (back-compat)
+    const image = await fetchOne(body, exclude);
     if (!image) {
       return new Response(JSON.stringify({ ok: false, error: 'No unique image found' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
     return new Response(JSON.stringify({ ok: true, image }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
