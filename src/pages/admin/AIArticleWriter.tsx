@@ -434,6 +434,43 @@ export default function AIArticleWriter() {
     }
   };
 
+  // Find <figure data-img-slot="N" data-img-query="..."></figure> placeholders
+  // in the generated HTML, fetch one unique relevant image per slot, and swap
+  // them in. Excludes URLs already in use (DB + featured image just attached).
+  const injectInlineImages = async (forArticle: GeneratedArticle): Promise<GeneratedArticle> => {
+    if (!forArticle.content) return forArticle;
+    const slotRe = /<figure[^>]*data-img-slot=["']?(\d+)["']?[^>]*data-img-query=["']([^"']+)["'][^>]*>\s*<\/figure>/gi;
+    const slots: { full: string; query: string }[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = slotRe.exec(forArticle.content)) !== null) {
+      slots.push({ full: m[0], query: m[2] });
+    }
+    if (!slots.length) return forArticle;
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-article-image', {
+        body: {
+          topic: forArticle.title || topic,
+          keywords: (forArticle.tags || []).join(', ') || keywords,
+          queries: slots.map((s) => s.query),
+          excludeUrls: forArticle.featuredImage ? [forArticle.featuredImage] : [],
+        },
+      });
+      if (error || !data?.ok || !Array.isArray(data.images)) return forArticle;
+      let content = forArticle.content;
+      slots.forEach((slot, i) => {
+        const img = data.images[i];
+        const replacement = img?.url
+          ? `<figure class="my-6"><img src="${img.url}" alt="${slot.query.replace(/"/g, '&quot;')}" loading="lazy" class="w-full rounded-lg" />${img.credit ? `<figcaption class="text-xs text-muted-foreground mt-1">${img.credit}</figcaption>` : ''}</figure>`
+          : '';
+        content = content.replace(slot.full, replacement);
+      });
+      return { ...forArticle, content };
+    } catch {
+      return forArticle;
+    }
+  };
+
+
   const handleGenerate = async () => {
     if (!topic.trim()) {
       toast({ title: 'Topic required', variant: 'destructive' });
