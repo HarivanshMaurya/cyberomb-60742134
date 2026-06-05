@@ -207,7 +207,7 @@ const BlogArticle = () => {
                 </div>
               ) : displayContent ? (
                 <div 
-                  className="prose prose-lg max-w-none mb-16 animate-slide-up stagger-2"
+                  className="article-content max-w-none mb-16 animate-slide-up stagger-2"
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(displayContent) }}
                 />
               ) : null}
