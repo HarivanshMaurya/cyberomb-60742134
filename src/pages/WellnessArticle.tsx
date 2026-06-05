@@ -114,7 +114,7 @@ export default function WellnessArticle() {
 
         {/* Article Content */}
         <article
-          className="prose prose-lg max-w-none dark:prose-invert"
+          className="article-content max-w-none"
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(article.content) }}
         />
       </main>
