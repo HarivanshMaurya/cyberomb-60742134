@@ -73,7 +73,10 @@ Rules for "content" HTML:
 - 5-7 main <h2> sections, each with 2-4 paragraphs and at least one <ul>/<ol>, <strong>, or <blockquote> for visual variety.
 - One <h2>FAQs</h2> section with 4-6 real question H3s and concise <p> answers (40-80 words each).
 - End with a <h2>Final thoughts</h2> (NOT "Conclusion") that gives a clear next step or opinion.
-- Use <p>, <ul>/<ol>, <strong>, <em>, <blockquote>, <h2>, <h3> only. NO inline styles. NO <html>/<body>. NO markdown. NO <img> tags (cover image is added separately).
+- INLINE IMAGE SLOTS (mandatory): insert EXACTLY 3 image placeholders, spaced evenly through the body (after sections 2, 4, and 6 roughly). Each placeholder MUST be of this exact form and nothing else — the platform will replace them with real images:
+  <figure data-img-slot="1" data-img-query="SHORT VISUAL SEARCH QUERY HERE"></figure>
+  The data-img-query MUST be a concrete, photographable noun phrase (3-6 words) tied to that section's topic — e.g. "woman meditating sunrise beach" not "mindfulness concept". Number slots 1, 2, 3 in order. Do NOT add <img> tags yourself.
+- Use <p>, <ul>/<ol>, <strong>, <em>, <blockquote>, <h2>, <h3>, <figure data-img-slot data-img-query> only. NO inline styles. NO <html>/<body>. NO markdown. NO real <img> tags (cover image and inline images are added separately).
 - Target length: ${len}.
 - Tone: ${tone}. Language: ${lang}${lang === 'Hinglish' ? ' (natural Hindi + English mix in Roman script, like a real desi blogger talking to a friend)' : ''}.
 - It must read like it was written by a senior human expert who actually uses/lived the topic — not by an AI summarising the web.`;
