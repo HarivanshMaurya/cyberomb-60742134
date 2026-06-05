@@ -481,12 +481,13 @@ export default function AIArticleWriter() {
     try {
       const result = await callAI({ topic, keywords, instruction, tone, language, length, mode: 'full' });
       const withImage = await fetchAutoImage(result);
-      setArticle(withImage);
+      const withInline = await injectInlineImages(withImage);
+      setArticle(withInline);
       setDraftId(null); // a fresh generation gets a new draft row
       setActiveTab('edit');
       toast({
         title: 'Article generated',
-        description: withImage.featuredImage ? 'Cover image auto-attached.' : 'Cover image fetch skipped.',
+        description: withInline.featuredImage ? 'Cover + inline images auto-attached.' : 'Cover image fetch skipped.',
       });
     } catch (e) {
       toast({ title: 'Generation failed', description: (e as Error).message, variant: 'destructive' });
