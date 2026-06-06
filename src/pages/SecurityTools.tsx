@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Header from "@/components/Header";
 import SEOHead, { SITE_NAME, SITE_URL } from "@/components/SEOHead";
 import PageBackground from "@/components/PageBackground";
