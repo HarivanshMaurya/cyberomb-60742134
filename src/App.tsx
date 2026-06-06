@@ -28,6 +28,7 @@ import ReadBook from "./pages/ReadBook";
 import Newsletter from "./pages/Newsletter";
 import ResetPassword from "./pages/ResetPassword";
 import WellnessArticlePage from "./pages/WellnessArticle";
+import SecurityTools from "./pages/SecurityTools";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NavbarEditor from "./pages/admin/NavbarEditor";
 import HeroEditor from "./pages/admin/HeroEditor";
@@ -89,6 +90,7 @@ const App = () => (
             <Route path="/product/:slug" element={<ProductDetail />} />
             <Route path="/read/:slug" element={<ReadBook />} />
             <Route path="/newsletter" element={<Newsletter />} />
+            <Route path="/security-tools" element={<SecurityTools />} />
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/404" element={<NotFound />} />
