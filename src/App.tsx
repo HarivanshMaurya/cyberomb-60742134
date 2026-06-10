@@ -57,7 +57,6 @@ import LanguagesManager from "./pages/admin/LanguagesManager";
 import AIArticleWriter from "./pages/admin/AIArticleWriter";
 import Preloader from "./components/Preloader";
 import ScrollToTop from "./components/ScrollToTop";
-import { Helmet } from "react-helmet";
 
 const queryClient = new QueryClient();
 
@@ -65,16 +64,6 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
-
-        {/* Google AdSense Script */}
-        <Helmet>
-          <script
-            async
-            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7431282281657759"
-            crossOrigin="anonymous"
-          />
-        </Helmet>
-
         <Preloader />
         <Toaster />
         <Sonner />
@@ -153,4 +142,5 @@ const App = () => (
     </AuthProvider>
   </QueryClientProvider>
 );
+
 export default App;
