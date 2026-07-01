@@ -599,7 +599,7 @@ const SecurityTools = () => {
         description="Free online cybersecurity toolkit: strong password generator, strength checker, email data-breach lookup, IP geolocation, and phishing URL analyzer. Privacy-first — everything runs in your browser."
         canonical={`${SITE_URL}/security-tools`}
         keywords="password generator, strong password, password strength checker, email breach checker, data breach lookup, ip address lookup, ip geolocation, phishing url checker, scam link checker, cybersecurity tools, free security tools"
-        structuredData={[collectionLd, faqLd, breadcrumbLd] as any}
+        jsonLd={[collectionLd, faqLd, breadcrumbLd] as any}
       />
       <PageBackground />
       <Header />
