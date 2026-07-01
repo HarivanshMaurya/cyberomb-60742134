@@ -55,6 +55,7 @@ import WellnessArticleEditor from "./pages/admin/WellnessArticleEditor";
 import Settings from "./pages/admin/Settings";
 import LanguagesManager from "./pages/admin/LanguagesManager";
 import AIArticleWriter from "./pages/admin/AIArticleWriter";
+import SecurityToolsAnalytics from "./pages/admin/SecurityToolsAnalytics";
 import Preloader from "./components/Preloader";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -133,6 +134,7 @@ const App = () => (
               <Route path="wellness-articles/:id" element={<WellnessArticleEditor />} />
               <Route path="settings" element={<Settings />} />
               <Route path="languages" element={<LanguagesManager />} />
+              <Route path="security-analytics" element={<SecurityToolsAnalytics />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
