@@ -27,6 +27,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
       { to: '/admin/analytics', icon: BarChart3, label: 'Analytics' },
+      { to: '/admin/security-analytics', icon: Shield, label: 'Security Tools' },
     ],
   },
   {
