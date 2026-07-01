@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { generatePassword, checkStrength, type StrengthResult } from "@/lib/passwordTools";
 import { scanUrl, type UrlScanResult } from "@/lib/urlScanner";
+import { logToolEvent, rateLimit, toErrorCode } from "@/lib/securityAnalytics";
 
 /* ------------------ Password Generator ------------------ */
 const PasswordGenerator = () => {
@@ -204,10 +205,18 @@ const BreachChecker = () => {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const v = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast.error("Enter a valid email"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { toast.error("Enter a valid email address."); return; }
+    if (v.length > 254) { toast.error("Email is too long."); return; }
+    if (!rateLimit("breach", 5, 60_000)) {
+      toast.error("You're checking too fast. Please wait a moment and try again.");
+      return;
+    }
     setLoading(true); setData(null);
     try {
-      const res = await fetch(`https://api.xposedornot.com/v1/check-email/${encodeURIComponent(v)}`);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      const res = await fetch(`https://api.xposedornot.com/v1/check-email/${encodeURIComponent(v)}`, { signal: ctrl.signal });
+      clearTimeout(timer);
       if (res.status === 404) {
         setData({ found: false, count: 0, breaches: [] });
       } else if (res.ok) {
@@ -217,9 +226,11 @@ const BreachChecker = () => {
       } else {
         throw new Error(`Lookup service returned ${res.status}`);
       }
+      logToolEvent("breach", "use");
     } catch (err: any) {
-      setData({ found: false, count: 0, breaches: [], error: err.message || "Lookup failed" });
+      setData({ found: false, count: 0, breaches: [], error: "We couldn't reach the breach database right now. Please try again later." });
       toast.error("Could not reach breach database. Try again later.");
+      logToolEvent("breach", "error", toErrorCode(err));
     } finally {
       setLoading(false);
     }
@@ -300,15 +311,24 @@ const IpLookup = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchIp = async (target?: string) => {
+    if (!rateLimit("ip", 8, 60_000)) {
+      toast.error("Too many lookups. Please slow down for a minute.");
+      return;
+    }
     setLoading(true); setData(null);
     try {
       const url = target ? `https://ipapi.co/${encodeURIComponent(target)}/json/` : `https://ipapi.co/json/`;
-      const res = await fetch(url);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
       const j: IpInfo = await res.json();
       if (j.error) throw new Error(j.reason || "Lookup failed");
       setData(j);
+      logToolEvent("ip", "use");
     } catch (err: any) {
-      toast.error(err.message || "Lookup failed");
+      toast.error("We couldn't complete the IP lookup. Please try again.");
+      logToolEvent("ip", "error", toErrorCode(err));
     } finally {
       setLoading(false);
     }
@@ -325,8 +345,8 @@ const IpLookup = () => {
     e.preventDefault();
     const v = input.trim();
     if (!v) { fetchIp(); return; }
-    const valid = /^([0-9a-fA-F:.]+)$/.test(v);
-    if (!valid) { toast.error("Enter a valid IP address"); return; }
+    const valid = /^([0-9a-fA-F:.]+)$/.test(v) && v.length <= 45;
+    if (!valid) { toast.error("Enter a valid IPv4 or IPv6 address."); return; }
     fetchIp(v);
   };
 
@@ -380,8 +400,16 @@ const UrlChecker = () => {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const v = input.trim();
-    if (!v) { toast.error("Paste a URL to check"); return; }
-    setData(scanUrl(v));
+    if (!v) { toast.error("Paste a URL to check."); return; }
+    if (v.length > 2048) { toast.error("URL is too long."); return; }
+    if (!rateLimit("url", 20, 60_000)) { toast.error("Too many checks — please slow down."); return; }
+    try {
+      setData(scanUrl(v));
+      logToolEvent("url", "use");
+    } catch (err) {
+      toast.error("Couldn't analyze that URL. Please check the format and try again.");
+      logToolEvent("url", "error", toErrorCode(err));
+    }
   };
 
   const verdictStyle = (v?: string) =>
