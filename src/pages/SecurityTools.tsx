@@ -46,7 +46,9 @@ const PasswordGenerator = () => {
     if (!pw) return;
     await navigator.clipboard.writeText(pw);
     toast.success("Password copied to clipboard");
+    logToolEvent("generator", "use");
   };
+
 
   const meterColor =
     strength.score >= 85 ? "bg-emerald-500" :
