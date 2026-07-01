@@ -489,35 +489,139 @@ const TOOLS = [
 const SecurityTools = () => {
   const [tab, setTab] = useState("generator");
 
+  // Deep-link tab via URL hash for indexable anchors (#password-generator, etc.)
+  useEffect(() => {
+    const map: Record<string, string> = {
+      "#password-generator": "generator",
+      "#password-strength": "strength",
+      "#email-breach-checker": "breach",
+      "#ip-lookup": "ip",
+      "#scam-url-checker": "url",
+    };
+    const applyHash = () => {
+      const t = map[window.location.hash];
+      if (t) setTab(t);
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
+
+  const faqs = [
+    { q: "Is the password generator safe to use?",
+      a: "Yes. Passwords are generated locally in your browser using the Web Crypto API (crypto.getRandomValues). Nothing is sent to our servers, logged, or stored." },
+    { q: "How does the email breach checker work?",
+      a: "It queries the public XposedOrNot breach database over HTTPS. We do not store your email address, and we rate-limit requests to protect the free upstream service." },
+    { q: "Is the IP lookup accurate?",
+      a: "IP geolocation is approximate — often accurate to the city level but not to the individual. VPNs, proxies, and CDNs can hide the real origin." },
+    { q: "Does the scam URL checker visit the link?",
+      a: "No. It only inspects the URL string itself — hostname, TLD, punycode, brand impersonation, obfuscation and other heuristic signals. The site is never fetched." },
+    { q: "What makes a strong password?",
+      a: "A password becomes strong when it has high entropy — a long length (16+ characters) mixed with upper- and lower-case letters, numbers, and symbols, and is unique to that account." },
+  ];
+
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+
+  const collectionLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Cybersecurity Tools",
+    url: `${SITE_URL}/security-tools`,
+    isPartOf: { "@type": "WebSite", name: SITE_NAME, url: SITE_URL },
+    hasPart: [
+      { "@type": "SoftwareApplication", name: "Password Generator", applicationCategory: "SecurityApplication", operatingSystem: "Web", offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }, url: `${SITE_URL}/security-tools#password-generator` },
+      { "@type": "SoftwareApplication", name: "Password Strength Checker", applicationCategory: "SecurityApplication", operatingSystem: "Web", offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }, url: `${SITE_URL}/security-tools#password-strength` },
+      { "@type": "SoftwareApplication", name: "Email Breach Checker", applicationCategory: "SecurityApplication", operatingSystem: "Web", offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }, url: `${SITE_URL}/security-tools#email-breach-checker` },
+      { "@type": "SoftwareApplication", name: "IP Address Lookup", applicationCategory: "SecurityApplication", operatingSystem: "Web", offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }, url: `${SITE_URL}/security-tools#ip-lookup` },
+      { "@type": "SoftwareApplication", name: "Scam URL Checker", applicationCategory: "SecurityApplication", operatingSystem: "Web", offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }, url: `${SITE_URL}/security-tools#scam-url-checker` },
+    ],
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "Cybersecurity Tools", item: `${SITE_URL}/security-tools` },
+    ],
+  };
+
+  const TOOL_SECTIONS: { id: string; anchor: string; h2: string; intro: string; keywords: string; bullets: string[] }[] = [
+    {
+      id: "generator", anchor: "password-generator",
+      h2: "Free Secure Password Generator",
+      intro: "Create strong, cryptographically random passwords instantly. The generator runs entirely in your browser using the Web Crypto API — nothing is transmitted or stored.",
+      keywords: "strong password generator, random password, secure password, 16 character password",
+      bullets: ["Uses crypto.getRandomValues for true randomness", "Customizable length (8–64) and character sets", "Optional exclusion of look-alike characters (l, 1, O, 0)", "Real-time entropy and crack-time estimation"],
+    },
+    {
+      id: "strength", anchor: "password-strength",
+      h2: "Password Strength Checker",
+      intro: "Instantly test how resistant your password is to brute-force and dictionary attacks. Get concrete suggestions to improve it.",
+      keywords: "password strength test, how strong is my password, password entropy calculator",
+      bullets: ["Estimates entropy in bits and time-to-crack", "Detects dictionary words and repeated patterns", "Runs 100% locally — never sends your password anywhere"],
+    },
+    {
+      id: "breach", anchor: "email-breach-checker",
+      h2: "Email Data Breach Checker",
+      intro: "Check whether your email address has appeared in a publicly disclosed data breach, and see which services were affected so you can act quickly.",
+      keywords: "email breach checker, have i been pwned alternative, data leak lookup",
+      bullets: ["Queries the public XposedOrNot breach database", "Lists impacted services when a match is found", "Rate-limited and validated to protect the upstream API"],
+    },
+    {
+      id: "ip", anchor: "ip-lookup",
+      h2: "IP Address Lookup & Geolocation",
+      intro: "Look up any public IPv4 or IPv6 address to see approximate location, ISP, ASN and time zone. Auto-detects your own IP on load.",
+      keywords: "ip address lookup, ip geolocation, what is my ip, ip whois",
+      bullets: ["Country, region, city, postal code and coordinates", "ISP / organization and Autonomous System Number", "Detects private / reserved address ranges"],
+    },
+    {
+      id: "url", anchor: "scam-url-checker",
+      h2: "Scam & Phishing URL Checker",
+      intro: "Paste any suspicious link and get an instant risk score. The checker analyzes 12+ heuristic signals without ever visiting the site.",
+      keywords: "phishing url checker, is this link safe, scam link detector",
+      bullets: ["Detects punycode, brand impersonation, look-alike domains", "Flags suspicious TLDs and URL shorteners", "Explains every finding with plain-English recommendations"],
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       <SEOHead
-        title="Cybersecurity Tools — Password, Breach, IP & URL Checks"
-        description="Free cybersecurity toolkit: secure password generator, strength checker, email breach lookup, IP geolocation, and phishing URL analyzer. Privacy-first and instant."
+        title="Free Cybersecurity Tools — Password Generator, Breach, IP & URL Checker"
+        description="Free online cybersecurity toolkit: strong password generator, strength checker, email data-breach lookup, IP geolocation, and phishing URL analyzer. Privacy-first — everything runs in your browser."
         canonical={`${SITE_URL}/security-tools`}
-        keywords="password generator, password strength, email breach checker, ip lookup, phishing url checker, cybersecurity tools"
+        keywords="password generator, strong password, password strength checker, email breach checker, data breach lookup, ip address lookup, ip geolocation, phishing url checker, scam link checker, cybersecurity tools, free security tools"
+        structuredData={[collectionLd, faqLd, breadcrumbLd] as any}
       />
       <PageBackground />
       <Header />
 
-      <main className="relative z-10 max-w-6xl mx-auto px-4 md:px-6 pt-28 md:pt-32 pb-20">
+      <main id="main" role="main" className="relative z-10 max-w-6xl mx-auto px-4 md:px-6 pt-28 md:pt-32 pb-20">
         <header className="text-center mb-10 md:mb-14">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary mb-4">
-            <Shield className="h-3.5 w-3.5" /> Cybersecurity Toolkit
+            <Shield className="h-3.5 w-3.5" aria-hidden /> Cybersecurity Toolkit
           </div>
           <h1 className="text-4xl md:text-6xl font-bold font-serif mb-4 bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
-            Stay Safe Online
+            Free Cybersecurity Tools
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto text-base md:text-lg">
-            Five professional security tools in one place. Everything runs privately — your passwords and personal data never leave your browser.
+            Five professional security tools in one place — password generator, strength checker, email breach lookup, IP geolocation and phishing URL analyzer. Everything runs privately in your browser.
           </p>
         </header>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto w-full bg-muted/50 p-1.5 rounded-xl mb-8 gap-1">
+          <TabsList aria-label="Choose a security tool" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 h-auto w-full bg-muted/50 p-1.5 rounded-xl mb-8 gap-1">
             {TOOLS.map((t) => (
               <TabsTrigger key={t.id} value={t.id} className="flex items-center gap-1.5 py-2.5 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <t.icon className="h-3.5 w-3.5" />
+                <t.icon className="h-3.5 w-3.5" aria-hidden />
                 <span className="hidden sm:inline">{t.label}</span>
                 <span className="sm:hidden">{t.label.split(" ")[0]}</span>
               </TabsTrigger>
@@ -531,18 +635,54 @@ const SecurityTools = () => {
           <TabsContent value="url"><UrlChecker /></TabsContent>
         </Tabs>
 
-        <section className="mt-16 grid md:grid-cols-3 gap-4">
+        <section aria-labelledby="why-heading" className="mt-16 grid md:grid-cols-3 gap-4">
+          <h2 id="why-heading" className="sr-only">Why use these tools</h2>
           {[
             { icon: Shield, title: "Privacy-first", text: "Passwords and inputs are processed in your browser. We don't log or store them." },
             { icon: ShieldCheck, title: "Real working tools", text: "Connected to live, free public databases — no fake data, no demo mode." },
             { icon: KeyRound, title: "Production-ready", text: "Cryptographically secure RNG, validated inputs, hardened heuristics." },
           ].map((f, i) => (
-            <div key={i} className="rounded-xl border border-border/60 bg-card/50 backdrop-blur-sm p-5">
-              <f.icon className="h-5 w-5 text-primary mb-2" />
+            <article key={i} className="rounded-xl border border-border/60 bg-card/50 backdrop-blur-sm p-5">
+              <f.icon className="h-5 w-5 text-primary mb-2" aria-hidden />
               <h3 className="font-semibold mb-1">{f.title}</h3>
               <p className="text-sm text-muted-foreground">{f.text}</p>
-            </div>
+            </article>
           ))}
+        </section>
+
+        {/* Indexable, keyword-rich content sections for each tool */}
+        <section aria-labelledby="tools-guide-heading" className="mt-20 space-y-14">
+          <h2 id="tools-guide-heading" className="text-2xl md:text-3xl font-bold font-serif">About the Cybersecurity Toolkit</h2>
+          {TOOL_SECTIONS.map((s) => (
+            <article key={s.id} id={s.anchor} className="scroll-mt-28">
+              <h3 className="text-xl md:text-2xl font-semibold mb-3">{s.h2}</h3>
+              <p className="text-muted-foreground mb-4">{s.intro}</p>
+              <ul className="list-disc pl-5 space-y-1.5 text-sm text-foreground/90">
+                {s.bullets.map((b, i) => <li key={i}>{b}</li>)}
+              </ul>
+              <p className="mt-4">
+                <button
+                  onClick={() => { setTab(s.id); history.replaceState(null, "", `#${s.anchor}`); }}
+                  className="text-sm text-primary hover:underline font-medium"
+                >
+                  Open the {s.h2} →
+                </button>
+              </p>
+            </article>
+          ))}
+        </section>
+
+        {/* FAQ — matches JSON-LD above for rich results */}
+        <section aria-labelledby="faq-heading" className="mt-20">
+          <h2 id="faq-heading" className="text-2xl md:text-3xl font-bold font-serif mb-6">Frequently Asked Questions</h2>
+          <div className="space-y-5">
+            {faqs.map((f, i) => (
+              <article key={i} className="rounded-xl border border-border/60 bg-card/50 backdrop-blur-sm p-5">
+                <h3 className="font-semibold mb-2">{f.q}</h3>
+                <p className="text-sm text-muted-foreground">{f.a}</p>
+              </article>
+            ))}
+          </div>
         </section>
       </main>
     </div>
@@ -550,3 +690,4 @@ const SecurityTools = () => {
 };
 
 export default SecurityTools;
+
