@@ -598,6 +598,30 @@ export type Database = {
         }
         Relationships: []
       }
+      security_tool_events: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          event_type: string
+          id: string
+          tool_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          event_type: string
+          id?: string
+          tool_id: string
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          event_type?: string
+          id?: string
+          tool_id?: string
+        }
+        Relationships: []
+      }
       site_sections: {
         Row: {
           content: Json
