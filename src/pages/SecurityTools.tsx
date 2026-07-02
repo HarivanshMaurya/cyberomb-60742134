@@ -199,7 +199,7 @@ interface BreachData {
   breaches: string[];
   error?: string;
 }
-const BreachChecker = () => {
+export const BreachChecker = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<BreachData | null>(null);
