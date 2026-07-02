@@ -29,6 +29,7 @@ import Newsletter from "./pages/Newsletter";
 import ResetPassword from "./pages/ResetPassword";
 import WellnessArticlePage from "./pages/WellnessArticle";
 import SecurityTools from "./pages/SecurityTools";
+import SecurityToolPage from "./pages/SecurityToolPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NavbarEditor from "./pages/admin/NavbarEditor";
 import HeroEditor from "./pages/admin/HeroEditor";
