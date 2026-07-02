@@ -395,7 +395,7 @@ export const IpLookup = () => {
 };
 
 /* ------------------ URL Scam Checker ------------------ */
-const UrlChecker = () => {
+export const UrlChecker = () => {
   const [input, setInput] = useState("");
   const [data, setData] = useState<UrlScanResult | null>(null);
 
