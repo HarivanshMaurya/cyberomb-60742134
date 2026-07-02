@@ -112,7 +112,7 @@ export const PasswordGenerator = () => {
 };
 
 /* ------------------ Password Strength Checker ------------------ */
-const StrengthChecker = () => {
+export const StrengthChecker = () => {
   const [pw, setPw] = useState("");
   const [reveal, setReveal] = useState(false);
   const res: StrengthResult = useMemo(() => checkStrength(pw), [pw]);
