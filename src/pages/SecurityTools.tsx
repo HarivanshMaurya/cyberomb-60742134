@@ -22,7 +22,7 @@ import { scanUrl, type UrlScanResult } from "@/lib/urlScanner";
 import { logToolEvent, rateLimit, toErrorCode } from "@/lib/securityAnalytics";
 
 /* ------------------ Password Generator ------------------ */
-const PasswordGenerator = () => {
+export const PasswordGenerator = () => {
   const [length, setLength] = useState(16);
   const [upper, setUpper] = useState(true);
   const [lower, setLower] = useState(true);
