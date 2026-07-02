@@ -93,6 +93,11 @@ const App = () => (
             <Route path="/read/:slug" element={<ReadBook />} />
             <Route path="/newsletter" element={<Newsletter />} />
             <Route path="/security-tools" element={<SecurityTools />} />
+            <Route path="/security-tools/password-generator" element={<SecurityToolPage slug="password-generator" />} />
+            <Route path="/security-tools/password-strength-checker" element={<SecurityToolPage slug="password-strength-checker" />} />
+            <Route path="/security-tools/email-breach-checker" element={<SecurityToolPage slug="email-breach-checker" />} />
+            <Route path="/security-tools/ip-lookup" element={<SecurityToolPage slug="ip-lookup" />} />
+            <Route path="/security-tools/scam-url-checker" element={<SecurityToolPage slug="scam-url-checker" />} />
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/404" element={<NotFound />} />
