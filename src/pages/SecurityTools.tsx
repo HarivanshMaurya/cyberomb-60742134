@@ -22,7 +22,7 @@ import { scanUrl, type UrlScanResult } from "@/lib/urlScanner";
 import { logToolEvent, rateLimit, toErrorCode } from "@/lib/securityAnalytics";
 
 /* ------------------ Password Generator ------------------ */
-const PasswordGenerator = () => {
+export const PasswordGenerator = () => {
   const [length, setLength] = useState(16);
   const [upper, setUpper] = useState(true);
   const [lower, setLower] = useState(true);
@@ -112,7 +112,7 @@ const PasswordGenerator = () => {
 };
 
 /* ------------------ Password Strength Checker ------------------ */
-const StrengthChecker = () => {
+export const StrengthChecker = () => {
   const [pw, setPw] = useState("");
   const [reveal, setReveal] = useState(false);
   const res: StrengthResult = useMemo(() => checkStrength(pw), [pw]);
@@ -199,7 +199,7 @@ interface BreachData {
   breaches: string[];
   error?: string;
 }
-const BreachChecker = () => {
+export const BreachChecker = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<BreachData | null>(null);
@@ -307,7 +307,7 @@ interface IpInfo {
   country_code?: string; postal?: string; latitude?: number; longitude?: number;
   timezone?: string; org?: string; asn?: string; error?: boolean; reason?: string;
 }
-const IpLookup = () => {
+export const IpLookup = () => {
   const [input, setInput] = useState("");
   const [data, setData] = useState<IpInfo | null>(null);
   const [loading, setLoading] = useState(false);
@@ -395,7 +395,7 @@ const IpLookup = () => {
 };
 
 /* ------------------ URL Scam Checker ------------------ */
-const UrlChecker = () => {
+export const UrlChecker = () => {
   const [input, setInput] = useState("");
   const [data, setData] = useState<UrlScanResult | null>(null);
 
