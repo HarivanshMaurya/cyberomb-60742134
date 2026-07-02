@@ -307,7 +307,7 @@ interface IpInfo {
   country_code?: string; postal?: string; latitude?: number; longitude?: number;
   timezone?: string; org?: string; asn?: string; error?: boolean; reason?: string;
 }
-const IpLookup = () => {
+export const IpLookup = () => {
   const [input, setInput] = useState("");
   const [data, setData] = useState<IpInfo | null>(null);
   const [loading, setLoading] = useState(false);
