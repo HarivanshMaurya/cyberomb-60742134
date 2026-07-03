@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { generatePassword, checkStrength, type StrengthResult } from "@/lib/passwordTools";
 import { scanUrl, type UrlScanResult } from "@/lib/urlScanner";
 import { logToolEvent, rateLimit, toErrorCode } from "@/lib/securityAnalytics";
+import { supabase } from "@/integrations/supabase/client";
 
 /* ------------------ Password Generator ------------------ */
 export const PasswordGenerator = () => {
