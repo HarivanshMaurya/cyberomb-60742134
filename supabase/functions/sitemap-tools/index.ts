@@ -1,4 +1,4 @@
-const SITE_URL = "https://cyberomb.lovable.app";
+const SITE_URL = "https://cyberom.in";
 const TOOLS = [
   "password-generator",
   "password-strength-checker",
