@@ -598,6 +598,27 @@ export type Database = {
         }
         Relationships: []
       }
+      sec_rate_limits: {
+        Row: {
+          bucket: string
+          created_at: string
+          id: string
+          ip_hash: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          id?: string
+          ip_hash: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          id?: string
+          ip_hash?: string
+        }
+        Relationships: []
+      }
       security_tool_events: {
         Row: {
           created_at: string
