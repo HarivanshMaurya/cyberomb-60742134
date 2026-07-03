@@ -216,18 +216,15 @@ export const BreachChecker = () => {
     }
     setLoading(true); setData(null);
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8000);
-      const res = await fetch(`https://api.xposedornot.com/v1/check-email/${encodeURIComponent(v)}`, { signal: ctrl.signal });
-      clearTimeout(timer);
-      if (res.status === 404) {
-        setData({ found: false, count: 0, breaches: [] });
-      } else if (res.ok) {
-        const j = await res.json();
-        const sites: string[] = j?.breaches?.[0] ?? [];
-        setData({ found: sites.length > 0, count: sites.length, breaches: sites });
+      const { data: j, error } = await supabase.functions.invoke("sec-breach-check", { body: { email: v } });
+      if (error) throw error;
+      if (j?.error === "rate_limited") {
+        toast.error("Server rate limit reached. Please wait a minute.");
+        setData({ found: false, count: 0, breaches: [], error: "Rate limit reached — please retry shortly." });
+      } else if (j?.error) {
+        throw new Error(j.error);
       } else {
-        throw new Error(`Lookup service returned ${res.status}`);
+        setData({ found: !!j.found, count: j.count || 0, breaches: j.breaches || [] });
       }
       logToolEvent("breach", "use");
     } catch (err: any) {
