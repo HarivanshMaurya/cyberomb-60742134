@@ -1,4 +1,4 @@
-const SITE_URL = "https://cyberomb.lovable.app";
+const SITE_URL = "https://cyberom.in";
 const STATIC = [
   { loc: "/", priority: "1.0", changefreq: "daily" },
   { loc: "/articles", priority: "0.9", changefreq: "daily" },
