@@ -317,13 +317,10 @@ export const IpLookup = () => {
     }
     setLoading(true); setData(null);
     try {
-      const url = target ? `https://ipapi.co/${encodeURIComponent(target)}/json/` : `https://ipapi.co/json/`;
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 8000);
-      const res = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(timer);
-      const j: IpInfo = await res.json();
-      if (j.error) throw new Error(j.reason || "Lookup failed");
+      const { data: j, error } = await supabase.functions.invoke("sec-ip-lookup", { body: { ip: target || "" } });
+      if (error) throw error;
+      if (j?.error === "rate_limited") { toast.error("Server rate limit reached. Please slow down."); return; }
+      if (j?.error) throw new Error(j.error);
       setData(j);
       logToolEvent("ip", "use");
     } catch (err: any) {
