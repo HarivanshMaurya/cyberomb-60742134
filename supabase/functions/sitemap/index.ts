@@ -1,5 +1,5 @@
 // Sitemap index — points at split sub-sitemaps (blog, wellness, tools, pages, static).
-const SITE_URL = "https://cyberomb.lovable.app";
+const SITE_URL = "https://cyberom.in";
 const FN_BASE = `${SITE_URL}/functions/v1`;
 
 const CHILDREN = [
