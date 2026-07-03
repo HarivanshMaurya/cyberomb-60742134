@@ -1,8 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /admin
+Disallow: /login
+Disallow: /reset-password
+Disallow: /404
+
+# Explicit allows for major crawlers
 User-agent: Googlebot
 Allow: /
+
 User-agent: Bingbot
 Allow: /
-
 
 User-agent: Twitterbot
 Allow: /
@@ -13,11 +22,17 @@ Allow: /
 User-agent: LinkedInBot
 Allow: /
 
-User-agent: *
+# AI search crawlers
+User-agent: GPTBot
 Allow: /
-Disallow: /admin/
-Disallow: /login
-Disallow: /reset-password
-Disallow: /404
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
 
 Sitemap: https://cyberomb.lovable.app/functions/v1/sitemap
