@@ -35,4 +35,4 @@ Allow: /
 User-agent: ClaudeBot
 Allow: /
 
-Sitemap: https://cyberomb.lovable.app/functions/v1/sitemap
+Sitemap: https://cyberomb.lovable.app/sitemap.xml
