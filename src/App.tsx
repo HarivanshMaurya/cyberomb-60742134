@@ -59,6 +59,7 @@ import AIArticleWriter from "./pages/admin/AIArticleWriter";
 import SecurityToolsAnalytics from "./pages/admin/SecurityToolsAnalytics";
 import Preloader from "./components/Preloader";
 import ScrollToTop from "./components/ScrollToTop";
+import Analytics from "./components/Analytics";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
+        <Analytics />
         <Preloader />
         <Toaster />
         <Sonner />
