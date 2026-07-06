@@ -1,0 +1,1 @@
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS tags text[] NOT NULL DEFAULT '{}'::text[]; CREATE INDEX IF NOT EXISTS articles_tags_gin_idx ON public.articles USING gin (tags);

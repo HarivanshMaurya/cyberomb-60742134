@@ -445,7 +445,7 @@ export default function ArticleEditor() {
                      {formData.meta_title || formData.title || 'Article Title'} | Cyberom
                    </p>
                    <p className="text-[#006621] text-sm truncate">
-                     cyberomb.lovable.app/blog/{formData.slug || 'article-slug'}
+                     cyberom.in/blog/{formData.slug || 'article-slug'}
                    </p>
                    <p className="text-sm text-[#545454] line-clamp-2">
                      {formData.meta_description || formData.excerpt || 'Add a meta description to improve click-through rates from search results.'}

@@ -148,6 +148,8 @@ const Articles = () => {
                   category={article.category}
                   date={new Date(article.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   image={article.featured_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800&q=80'}
+                  excerpt={article.excerpt}
+                  tags={article.tags}
                   size="small"
                 />
               </div>

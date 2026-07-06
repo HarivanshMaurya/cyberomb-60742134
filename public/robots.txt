@@ -1,38 +1,32 @@
+# CyberOM robots.txt
 User-agent: *
 Allow: /
-Disallow: /admin/
+
+# Block admin & auth surfaces
 Disallow: /admin
+Disallow: /admin/
 Disallow: /login
 Disallow: /reset-password
-Disallow: /404
 
-# Explicit allows for major crawlers
-User-agent: Googlebot
-Allow: /
+# Block generic query-string duplicates
+Disallow: /*?*utm_
+Disallow: /*?*ref=
 
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
-User-agent: LinkedInBot
-Allow: /
-
-# AI search crawlers
+# AI training crawlers (opt-out — flip to Allow if you want to be included)
 User-agent: GPTBot
-Allow: /
+Disallow: /
 
-User-agent: OAI-SearchBot
-Allow: /
+User-agent: CCBot
+Disallow: /
 
-User-agent: PerplexityBot
-Allow: /
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
 
 User-agent: ClaudeBot
-Allow: /
+Disallow: /
 
-Sitemap: https://cyberomb.lovable.app/sitemap.xml
+# Sitemaps
+Sitemap: https://cyberom.in/sitemap.xml
