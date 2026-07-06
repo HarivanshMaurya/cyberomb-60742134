@@ -8,6 +8,8 @@ interface ArticleCardProps {
   category: string;
   date: string;
   image: string;
+  excerpt?: string | null;
+  tags?: string[] | null;
   size?: "small" | "large";
   featured?: boolean;
 }
@@ -18,6 +20,8 @@ const ArticleCard = ({
   category,
   date,
   image,
+  excerpt,
+  tags,
   size = "small",
   featured = false,
 }: ArticleCardProps) => {
@@ -32,6 +36,8 @@ const ArticleCard = ({
     if (normalized.includes("growth")) return "tag-growth";
     return "tag-lifestyle";
   };
+
+  const visibleTags = (tags || []).filter(Boolean).slice(0, 3);
 
   return (
     <Link
@@ -96,8 +102,32 @@ const ArticleCard = ({
           </div>
         </div>
       </div>
+
+      {/* Body: excerpt + tags (used like a description in the articles section) */}
+      {(excerpt || visibleTags.length > 0) && (
+        <div className="p-5 sm:p-6 space-y-3">
+          {excerpt && (
+            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+              {excerpt}
+            </p>
+          )}
+          {visibleTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5" aria-label="Article tags">
+              {visibleTags.map((t) => (
+                <span
+                  key={t}
+                  className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  #{t}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </Link>
   );
 };
 
 export default ArticleCard;
+
