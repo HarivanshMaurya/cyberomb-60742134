@@ -744,9 +744,10 @@ export default function AIArticleWriter() {
         meta_description: article.metaDescription,
         featured_image: article.featuredImage || null,
         og_image: article.ogImage || article.featuredImage || null,
+        tags: (article.tags || []).map((t) => t.toLowerCase().trim()).filter(Boolean),
         published_at: status === 'published' ? new Date().toISOString() : null,
       };
-      const { data, error } = await supabase.from('articles').insert(payload).select('id').single();
+      const { data, error } = await supabase.from('articles').insert(payload as never).select('id').single();
       if (error) throw error;
       // Clean up the working draft now that it's saved as an article
       if (draftId) await supabase.from('ai_writer_drafts').delete().eq('id', draftId);
