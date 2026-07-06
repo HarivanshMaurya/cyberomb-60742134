@@ -551,32 +551,27 @@ export default function AIArticleWriter() {
       if (!entry) return;
       setSwapBusy(id);
       try {
-        const used = [
-          article.featuredImage || '',
-          ...inlineImages.map((e) => e.url || ''),
-        ].filter(Boolean);
-        const { data } = await supabase.functions.invoke('fetch-article-image', {
+        const { data } = await supabase.functions.invoke('generate-article-image', {
           body: {
+            prompt: `${entry.query} — different composition, alternate angle`,
             topic: article.title || topic,
             keywords: (article.tags || []).join(', ') || keywords,
-            queries: [entry.query],
-            excludeUrls: used,
+            aspect: '16:9',
           },
         });
-        const img = data?.images?.[0];
+        const img = data?.image;
         if (!img?.url) {
-          toast({ title: 'No new image found', variant: 'destructive' });
+          toast({ title: 'AI image generation failed', variant: 'destructive' });
           return;
         }
         const next: InlineImageEntry = {
-          ...entry, url: img.url, credit: img.credit || '', score: img.score,
-          status: (data?.logs?.[0]?.status as InlineImageEntry['status']) || 'ok',
+          ...entry, url: img.url, credit: 'AI-generated with Gemini', score: 1,
+          status: 'ok',
         };
         setInlineImages((arr) => arr.map((e) => (e.id === id ? next : e)));
-        // Replace existing <figure data-inline-id="id">...</figure> in content
         const re = new RegExp(`<figure[^>]*data-inline-id=["']${id}["'][^>]*>[\\s\\S]*?<\\/figure>`, 'i');
         setArticle((a) => a ? { ...a, content: a.content.replace(re, renderInlineFigure(next)) } : a);
-        toast({ title: 'Image swapped' });
+        toast({ title: 'New AI image generated' });
       } finally {
         setSwapBusy(null);
       }
