@@ -81,7 +81,7 @@ interface VersionRow {
   payload: GeneratedArticle;
 }
 
-const SITE_ORIGIN = 'https://cyberomb.lovable.app';
+const SITE_ORIGIN = 'https://cyberom.in';
 
 const slugify = (s: string) =>
   s.toLowerCase().trim()

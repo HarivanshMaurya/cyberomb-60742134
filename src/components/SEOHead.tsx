@@ -19,7 +19,7 @@ interface SEOHeadProps {
 }
 
 const SITE_NAME = "Cyberom";
-const SITE_URL = "https://cyberomb.lovable.app";
+const SITE_URL = "https://cyberom.in";
 const DEFAULT_DESCRIPTION =
   "A space for exploring ideas, finding inspiration, and discovering new ways of seeing the world through lifestyle, wellness, travel, and personal growth.";
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
