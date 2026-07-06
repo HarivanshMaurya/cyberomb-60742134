@@ -73,10 +73,10 @@ Rules for "content" HTML:
 - 5-7 main <h2> sections, each with 2-4 paragraphs and at least one <ul>/<ol>, <strong>, or <blockquote> for visual variety.
 - One <h2>FAQs</h2> section with 4-6 real question H3s and concise <p> answers (40-80 words each).
 - End with a <h2>Final thoughts</h2> (NOT "Conclusion") that gives a clear next step or opinion.
-- INLINE IMAGE SLOTS (mandatory): insert EXACTLY 4 image placeholders, spaced evenly through the body (roughly after sections 1, 3, 5, and before FAQs). Each placeholder MUST be of this exact form and nothing else — the platform will replace them with real images:
-  <figure data-img-slot="1" data-img-query="SHORT VISUAL SEARCH QUERY HERE"></figure>
-  The data-img-query MUST be a concrete, photographable noun phrase (3-6 words) tied to that section's topic — e.g. "woman meditating sunrise beach" not "mindfulness concept". Number slots 1, 2, 3, 4 in order. Do NOT add <img> tags yourself.
-- Use <p>, <ul>/<ol>, <strong>, <em>, <blockquote>, <h2>, <h3>, <figure data-img-slot data-img-query> only. NO inline styles. NO <html>/<body>. NO markdown. NO real <img> tags (cover image and inline images are added separately).
+- INLINE IMAGE SLOTS (mandatory): insert AT LEAST 3 image placeholders (aim for 3–4), spaced evenly through the body (e.g. after section 1, section 3, and before FAQs). Each placeholder MUST be of this exact form and nothing else — the platform will generate real AI images from data-img-prompt:
+  <figure data-img-slot="1" data-img-prompt="DETAILED AI IMAGE PROMPT HERE"></figure>
+  The data-img-prompt MUST be a rich, cinematic scene description (10–25 words) that an AI image generator can render — describe subject, setting, lighting, mood, camera style. E.g. "A young woman meditating cross-legged on a sunrise beach, warm golden light, soft morning haze, editorial photograph". Number slots 1, 2, 3(, 4) in order. Do NOT add <img> tags yourself.
+- Use <p>, <ul>/<ol>, <strong>, <em>, <blockquote>, <h2>, <h3>, <figure data-img-slot data-img-prompt> only. NO inline styles. NO <html>/<body>. NO markdown. NO real <img> tags (cover image and inline images are added separately).
 - Target length: ${len}.
 - Tone: ${tone}. Language: ${lang}${lang === 'Hinglish' ? ' (natural Hindi + English mix in Roman script, like a real desi blogger talking to a friend)' : ''}.
 - It must read like it was written by a senior human expert who actually uses/lived the topic — not by an AI summarising the web.`;
