@@ -93,6 +93,7 @@ export type Database = {
           read_time: string | null
           slug: string
           status: string
+          tags: string[]
           title: string
           translations: Json | null
           updated_at: string
@@ -113,6 +114,7 @@ export type Database = {
           read_time?: string | null
           slug: string
           status?: string
+          tags?: string[]
           title: string
           translations?: Json | null
           updated_at?: string
@@ -133,6 +135,7 @@ export type Database = {
           read_time?: string | null
           slug?: string
           status?: string
+          tags?: string[]
           title?: string
           translations?: Json | null
           updated_at?: string
