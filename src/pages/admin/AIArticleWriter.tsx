@@ -435,19 +435,37 @@ export default function AIArticleWriter() {
   // -------- Generation --------
   const fetchAutoImage = async (forArticle: GeneratedArticle): Promise<GeneratedArticle> => {
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-article-image', {
+      const coverPrompt = `Editorial cover image for an article titled "${forArticle.title || topic}". ${
+        (forArticle.tags || []).slice(0, 4).join(', ') || keywords || ''
+      }`.trim();
+      const { data, error } = await supabase.functions.invoke('generate-article-image', {
         body: {
+          prompt: coverPrompt,
           topic: forArticle.title || topic,
           keywords: (forArticle.tags || []).join(', ') || keywords,
+          aspect: '16:9',
         },
       });
-      if (data?.log) setCoverLog(data.log as ImageFetchLog);
+      setCoverLog({
+        slot: 0,
+        baseQuery: coverPrompt,
+        status: data?.ok ? 'ok' : 'failed',
+        picked: data?.image?.url,
+        attempts: [{
+          query: coverPrompt,
+          provider: 'gemini',
+          candidates: data?.image?.url ? 1 : 0,
+          topScore: data?.image?.url ? 1 : 0,
+          picked: data?.image?.url,
+          error: !data?.ok ? (data?.error || error?.message) : undefined,
+        }],
+      });
       if (error || !data?.ok || !data?.image?.url) return forArticle;
       return {
         ...forArticle,
         featuredImage: data.image.url,
-        imageCredit: data.image.credit || '',
-        imageSource: data.image.source || '',
+        imageCredit: 'AI-generated with Gemini',
+        imageSource: 'gemini',
       };
     } catch (e) {
       console.warn('[fetchAutoImage] failed', e);
@@ -457,17 +475,17 @@ export default function AIArticleWriter() {
 
   const renderInlineFigure = (entry: InlineImageEntry): string => {
     if (!entry.url) return '';
-    const safeAlt = entry.query.replace(/"/g, '&quot;');
+    const safeAlt = entry.query.replace(/"/g, '&quot;').slice(0, 200);
     const credit = entry.credit ? `<figcaption class="text-xs text-muted-foreground mt-2 text-center italic">${entry.credit}</figcaption>` : '';
-    return `<figure class="my-8" data-inline-id="${entry.id}" data-img-query="${safeAlt}"><img src="${entry.url}" alt="${safeAlt}" loading="lazy" class="w-full rounded-lg shadow-md" />${credit}</figure>`;
+    return `<figure class="my-8" data-inline-id="${entry.id}" data-img-prompt="${safeAlt}"><img src="${entry.url}" alt="${safeAlt}" loading="lazy" class="w-full rounded-lg shadow-md" />${credit}</figure>`;
   };
 
-  // Find <figure data-img-slot="N" data-img-query="..."></figure> placeholders,
-  // fetch one unique relevant image per slot, replace with a real <figure>
+  // Find placeholders (support both data-img-prompt and legacy data-img-query),
+  // generate one AI image per slot via Gemini, replace with a real <figure>
   // tagged with data-inline-id so the user can later swap/remove it.
   const injectInlineImages = async (forArticle: GeneratedArticle): Promise<GeneratedArticle> => {
     if (!forArticle.content) return forArticle;
-    const slotRe = /<figure[^>]*data-img-slot=["']?(\d+)["']?[^>]*data-img-query=["']([^"']+)["'][^>]*>\s*<\/figure>/gi;
+    const slotRe = /<figure[^>]*data-img-slot=["']?(\d+)["']?[^>]*data-img-(?:prompt|query)=["']([^"']+)["'][^>]*>\s*<\/figure>/gi;
     const slots: { full: string; slotNum: string; query: string }[] = [];
     let m: RegExpExecArray | null;
     while ((m = slotRe.exec(forArticle.content)) !== null) {
@@ -475,28 +493,42 @@ export default function AIArticleWriter() {
     }
     if (!slots.length) { setInlineImages([]); setImageLogs([]); return forArticle; }
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-article-image', {
+      const { data, error } = await supabase.functions.invoke('generate-article-image', {
         body: {
+          prompts: slots.map((s) => s.query),
           topic: forArticle.title || topic,
           keywords: (forArticle.tags || []).join(', ') || keywords,
-          queries: slots.map((s) => s.query),
-          excludeUrls: forArticle.featuredImage ? [forArticle.featuredImage] : [],
+          aspect: '16:9',
         },
       });
-      if (data?.logs) setImageLogs(data.logs as ImageFetchLog[]);
-      if (error || !data?.ok || !Array.isArray(data.images)) return forArticle;
+      const images: { url?: string; prompt?: string; error?: string }[] = data?.images || [];
+      const logs: ImageFetchLog[] = slots.map((s, i) => ({
+        slot: i + 1,
+        baseQuery: s.query,
+        status: images[i]?.url ? 'ok' : 'failed',
+        picked: images[i]?.url,
+        attempts: [{
+          query: s.query,
+          provider: 'gemini',
+          candidates: images[i]?.url ? 1 : 0,
+          topScore: images[i]?.url ? 1 : 0,
+          picked: images[i]?.url,
+          error: images[i]?.error,
+        }],
+      }));
+      setImageLogs(logs);
+      if (error || !data?.ok) return forArticle;
       let content = forArticle.content;
       const entries: InlineImageEntry[] = [];
       slots.forEach((slot, i) => {
-        const img = data.images[i];
-        const log = data.logs?.[i];
+        const img = images[i];
         const entry: InlineImageEntry = {
           id: `inline-${slot.slotNum}`,
           query: slot.query,
           url: img?.url || '',
-          credit: img?.credit || '',
-          score: img?.score,
-          status: !img ? 'failed' : (log?.status || 'ok'),
+          credit: img?.url ? 'AI-generated with Gemini' : '',
+          score: img?.url ? 1 : 0,
+          status: img?.url ? 'ok' : 'failed',
         };
         entries.push(entry);
         content = content.replace(slot.full, renderInlineFigure(entry));
