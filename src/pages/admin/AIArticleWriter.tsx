@@ -281,6 +281,8 @@ export default function AIArticleWriter() {
     credit?: string;
     score?: number;
     status: 'ok' | 'fallback' | 'failed' | 'empty';
+    provider?: 'gemini' | 'stock' | 'unsplash'; // which source finally served the image
+    error?: string;      // last upstream error / timeout reason, if any
   }
   interface ImageFetchLog {
     slot: number; baseQuery: string; status: string; picked?: string; pickedScore?: number;
