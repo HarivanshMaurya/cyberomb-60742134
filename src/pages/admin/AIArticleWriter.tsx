@@ -1239,15 +1239,43 @@ export default function AIArticleWriter() {
                         )}
                       </div>
 
-                      {/* Inline images registry */}
-                      {inlineImages.length > 0 && (
+                      {/* Inline images registry — Gemini generation status panel */}
+                      {inlineImages.length > 0 && (() => {
+                        const okCount = inlineImages.filter((e) => e.provider === 'gemini' && e.url).length;
+                        const fbCount = inlineImages.filter((e) => e.url && e.provider !== 'gemini').length;
+                        const failCount = inlineImages.filter((e) => !e.url).length;
+                        const providerLabel = (p?: string) =>
+                          p === 'gemini' ? 'Gemini AI'
+                          : p === 'stock' ? 'Stock fallback'
+                          : p === 'unsplash' ? 'Unsplash fallback'
+                          : 'unknown';
+                        const providerClass = (p?: string) =>
+                          p === 'gemini' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                          : p === 'stock' ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                          : p === 'unsplash' ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300'
+                          : 'bg-muted text-muted-foreground';
+                        return (
                         <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
-                          <Label className="text-xs flex items-center gap-1">
-                            <ImageIcon className="h-3 w-3" /> Inline images
-                            <span className="text-muted-foreground font-normal">
-                              ({inlineImages.filter((e) => e.url).length}/{inlineImages.length} found)
-                            </span>
-                          </Label>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <Label className="text-xs flex items-center gap-1">
+                              <ImageIcon className="h-3 w-3" /> Image generation status
+                            </Label>
+                            <div className="flex items-center gap-1.5 text-[10px]">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                                <CheckCircle2 className="h-2.5 w-2.5" /> {okCount} Gemini
+                              </span>
+                              {fbCount > 0 && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                                  <AlertTriangle className="h-2.5 w-2.5" /> {fbCount} fallback
+                                </span>
+                              )}
+                              {failCount > 0 && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-destructive/15 text-destructive">
+                                  <XCircle className="h-2.5 w-2.5" /> {failCount} failed
+                                </span>
+                              )}
+                            </div>
+                          </div>
                           {inlineImages.map((entry) => (
                             <div key={entry.id} className="flex gap-2 items-start rounded border bg-background p-2">
                               {entry.url ? (
@@ -1256,11 +1284,21 @@ export default function AIArticleWriter() {
                                 <div className="w-16 h-16 rounded bg-muted flex items-center justify-center text-[9px] text-muted-foreground shrink-0">empty</div>
                               )}
                               <div className="flex-1 min-w-0 space-y-1">
-                                <div className="text-[10px] font-mono text-muted-foreground truncate">{entry.query}</div>
-                                <div className="text-[9px] text-muted-foreground">
-                                  {entry.status}
-                                  {typeof entry.score === 'number' ? ` · score ${entry.score.toFixed(2)}` : ''}
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${providerClass(entry.provider)}`}>
+                                    {entry.provider === 'gemini' ? <CheckCircle2 className="h-2.5 w-2.5" />
+                                     : entry.url ? <AlertTriangle className="h-2.5 w-2.5" />
+                                     : <XCircle className="h-2.5 w-2.5" />}
+                                    {providerLabel(entry.provider)}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground">slot {entry.id.replace('inline-', '#')}</span>
                                 </div>
+                                <div className="text-[10px] font-mono text-muted-foreground truncate" title={entry.query}>{entry.query}</div>
+                                {entry.error && (
+                                  <div className="text-[9px] text-destructive font-mono truncate" title={entry.error}>
+                                    ⚠ {entry.error}
+                                  </div>
+                                )}
                                 <div className="flex gap-1">
                                   <Button
                                     type="button" size="sm" variant="outline" className="h-6 px-2 text-[10px]"
@@ -1288,7 +1326,7 @@ export default function AIArticleWriter() {
                                     <div className="font-semibold">Slot {log.slot} — {log.status}</div>
                                     {log.attempts.map((a, j) => (
                                       <div key={j} className="font-mono">
-                                        "{a.query}" → {a.candidates}, top {a.topScore.toFixed(2)}{a.error ? ` ⚠ ${a.error}` : ''}
+                                        "{a.query}" → {a.provider}, {a.candidates} cand{a.error ? ` ⚠ ${a.error}` : ''}
                                       </div>
                                     ))}
                                   </div>
@@ -1297,7 +1335,8 @@ export default function AIArticleWriter() {
                             </details>
                           )}
                         </div>
-                      )}
+                        );
+                      })()}
                       <div className="space-y-1">
                         <Label className="text-xs flex items-center gap-1">
                           <ImageIcon className="h-3 w-3" /> OG image URL
