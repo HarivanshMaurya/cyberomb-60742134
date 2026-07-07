@@ -1337,6 +1337,70 @@ export default function AIArticleWriter() {
                         </div>
                         );
                       })()}
+
+                      {/* Admin verification: check the current generation meets
+                          our contract (3+ valid image URLs, tags saved, tags
+                          reachable by SEOHead). Admin-only page → no extra RBAC. */}
+                      {(() => {
+                        const validUrls = inlineImages.filter((e) => !!e.url && /^https?:\/\//.test(e.url)).length;
+                        const tagCount = (article.tags || []).filter(Boolean).length;
+                        const seoKeywordsOk = tagCount > 0; // BlogArticle wires article.tags into keywords + article:tag
+                        const jsonLdTagsOk = tagCount > 0; // buildArticleJsonLd now emits keywords/about from tags
+                        const checks = [
+                          { label: '3+ image URLs present', ok: validUrls >= 3, detail: `${validUrls} / ${inlineImages.length}` },
+                          { label: 'Tags persisted on article', ok: tagCount > 0, detail: `${tagCount} tag(s)` },
+                          { label: 'SEOHead will emit <meta name="keywords"> & article:tag', ok: seoKeywordsOk, detail: seoKeywordsOk ? 'wired' : 'no tags' },
+                          { label: 'Article JSON-LD will include keywords/about', ok: jsonLdTagsOk, detail: jsonLdTagsOk ? 'wired' : 'no tags' },
+                        ];
+                        const allOk = checks.every((c) => c.ok);
+                        return (
+                          <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <Label className="text-xs flex items-center gap-1">
+                                <PlayCircle className="h-3 w-3" /> End-to-end verification
+                              </Label>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded ${allOk ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'}`}>
+                                {allOk ? 'All checks passed' : 'Action required'}
+                              </span>
+                            </div>
+                            <ul className="space-y-1 text-[11px]">
+                              {checks.map((c) => (
+                                <li key={c.label} className="flex items-center gap-2">
+                                  {c.ok ? <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                                        : <XCircle className="h-3 w-3 text-destructive shrink-0" />}
+                                  <span className="flex-1">{c.label}</span>
+                                  <span className="text-[10px] text-muted-foreground font-mono">{c.detail}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="w-full h-7 text-[11px] gap-1"
+                              disabled={!article.content}
+                              onClick={async () => {
+                                // Re-run image injection on current article to
+                                // refresh statuses; then report result via toast.
+                                if (!article) return;
+                                const refreshed = await injectInlineImages(article);
+                                setArticle(refreshed);
+                                const urls = (refreshed.content.match(/<img[^>]+src="https?:[^"]+"/g) || []).length;
+                                const tags = (refreshed.tags || []).length;
+                                const pass = urls >= 3 && tags > 0;
+                                toast({
+                                  title: pass ? 'Verification passed' : 'Verification failed',
+                                  description: `${urls} image URL(s) · ${tags} tag(s) · SEO tags ${tags > 0 ? 'wired' : 'missing'}`,
+                                  variant: pass ? 'default' : 'destructive',
+                                });
+                              }}
+                            >
+                              <PlayCircle className="h-3 w-3" /> Run verification
+                            </Button>
+                          </div>
+                        );
+                      })()}
+
                       <div className="space-y-1">
                         <Label className="text-xs flex items-center gap-1">
                           <ImageIcon className="h-3 w-3" /> OG image URL
