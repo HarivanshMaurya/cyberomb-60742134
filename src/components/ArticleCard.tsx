@@ -37,7 +37,9 @@ const ArticleCard = ({
     return "tag-lifestyle";
   };
 
-  const visibleTags = (tags || []).filter(Boolean).slice(0, 3);
+  // Tags are intentionally not rendered on the frontend — they are kept in
+  // the data model / meta tags for SEO (article:tag, keywords) only.
+  void tags;
 
   return (
     <Link
@@ -103,26 +105,12 @@ const ArticleCard = ({
         </div>
       </div>
 
-      {/* Body: excerpt + tags (used like a description in the articles section) */}
-      {(excerpt || visibleTags.length > 0) && (
-        <div className="p-5 sm:p-6 space-y-3">
-          {excerpt && (
-            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
-              {excerpt}
-            </p>
-          )}
-          {visibleTags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5" aria-label="Article tags">
-              {visibleTags.map((t) => (
-                <span
-                  key={t}
-                  className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider"
-                >
-                  #{t}
-                </span>
-              ))}
-            </div>
-          )}
+      {/* Body: excerpt only. Tags are omitted from the UI on purpose (SEO-only). */}
+      {excerpt && (
+        <div className="p-5 sm:p-6">
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+            {excerpt}
+          </p>
         </div>
       )}
     </Link>
