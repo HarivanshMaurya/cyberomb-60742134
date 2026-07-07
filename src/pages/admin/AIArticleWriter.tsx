@@ -597,7 +597,9 @@ export default function AIArticleWriter() {
         url: r.url,
         credit: r.credit,
         score: 1,
-        status: 'ok',
+        status: r.provider === 'gemini' ? 'ok' : 'fallback',
+        provider: r.provider,
+        error: r.error,
       };
       entries.push(entry);
       content = content.replace(slot.full, renderInlineFigure(entry));
