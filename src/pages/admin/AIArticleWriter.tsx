@@ -26,6 +26,7 @@ import {
   Cloud, CloudOff, ShieldCheck, ShieldAlert, History, Trash2,
   Undo2, Redo2, ExternalLink, HelpCircle, Link as LinkIcon, AlertTriangle,
   ListChecks, Share2, Image as ImageIcon, RotateCcw, Plus, Check, Download,
+  XCircle, CheckCircle2, PlayCircle,
 } from 'lucide-react';
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
