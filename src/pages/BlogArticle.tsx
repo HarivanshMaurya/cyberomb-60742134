@@ -116,6 +116,7 @@ const BlogArticle = () => {
     authorName: article.author_name || undefined,
     category: article.category,
     readTime: article.read_time || undefined,
+    tags: article.tags || undefined,
   });
 
   const breadcrumbJsonLd = buildBreadcrumbJsonLd([

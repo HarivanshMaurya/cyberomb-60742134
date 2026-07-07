@@ -148,7 +148,9 @@ export function buildArticleJsonLd(article: {
   authorName?: string;
   category?: string;
   readTime?: string;
+  tags?: string[];
 }) {
+  const cleanTags = (article.tags || []).map((t) => t?.trim()).filter(Boolean);
   return {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -177,6 +179,14 @@ export function buildArticleJsonLd(article: {
     },
     ...(article.category && { articleSection: article.category }),
     ...(article.readTime && { timeRequired: `PT${parseInt(article.readTime) || 5}M` }),
+    // Emit taxonomy consistently so search engines still receive tags even
+    // when the frontend hides tag pills. Schema.org "keywords" accepts a
+    // comma-separated string OR a string array — we ship both a joined
+    // string and a `about[]` list for maximum crawler compatibility.
+    ...(cleanTags.length > 0 && {
+      keywords: cleanTags.join(", "),
+      about: cleanTags.map((name) => ({ "@type": "Thing", name })),
+    }),
   };
 }
 
