@@ -614,27 +614,58 @@ export default function AIArticleWriter() {
       if (!entry) return;
       setSwapBusy(id);
       try {
-        const { data } = await supabase.functions.invoke('generate-article-image', {
-          body: {
-            prompt: `${entry.query} — different composition, alternate angle`,
-            topic: article.title || topic,
-            keywords: (article.tags || []).join(', ') || keywords,
-            aspect: '16:9',
-          },
-        });
-        const img = data?.image;
-        if (!img?.url) {
-          toast({ title: 'AI image generation failed', variant: 'destructive' });
-          return;
+        // 1) Try Gemini
+        let nextUrl = '';
+        let nextCredit = '';
+        try {
+          const { data } = await supabase.functions.invoke('generate-article-image', {
+            body: {
+              prompt: `${entry.query} — different composition, alternate angle`,
+              topic: article.title || topic,
+              keywords: (article.tags || []).join(', ') || keywords,
+              aspect: '16:9',
+            },
+          });
+          if (data?.image?.url) {
+            nextUrl = data.image.url;
+            nextCredit = 'AI-generated with Gemini';
+          }
+        } catch (e) { console.warn('[swapInlineImage] gemini failed', e); }
+
+        // 2) Stock fallback
+        if (!nextUrl) {
+          try {
+            const { data: stock } = await supabase.functions.invoke('fetch-article-image', {
+              body: {
+                topic: article.title || topic,
+                keywords: (article.tags || []).join(', ') || keywords,
+                queries: [entry.query],
+                count: 1,
+              },
+            });
+            const si = stock?.images?.[0];
+            if (si?.url) {
+              nextUrl = si.url;
+              nextCredit = si.credit || 'Stock photo';
+            }
+          } catch (e) { console.warn('[swapInlineImage] stock failed', e); }
         }
+
+        // 3) Unsplash Source fallback
+        if (!nextUrl) {
+          nextUrl = `https://source.unsplash.com/1200x675/?${encodeURIComponent(
+            entry.query.split(/[.,]/)[0].trim().split(/\s+/).slice(0, 4).join(',') || 'lifestyle'
+          )}&sig=${encodeURIComponent(id + Date.now())}`;
+          nextCredit = 'Photo via Unsplash';
+        }
+
         const next: InlineImageEntry = {
-          ...entry, url: img.url, credit: 'AI-generated with Gemini', score: 1,
-          status: 'ok',
+          ...entry, url: nextUrl, credit: nextCredit, score: 1, status: 'ok',
         };
         setInlineImages((arr) => arr.map((e) => (e.id === id ? next : e)));
         const re = new RegExp(`<figure[^>]*data-inline-id=["']${id}["'][^>]*>[\\s\\S]*?<\\/figure>`, 'i');
         setArticle((a) => a ? { ...a, content: a.content.replace(re, renderInlineFigure(next)) } : a);
-        toast({ title: 'New AI image generated' });
+        toast({ title: nextCredit.startsWith('AI') ? 'New AI image generated' : 'Fallback image used' });
       } finally {
         setSwapBusy(null);
       }
