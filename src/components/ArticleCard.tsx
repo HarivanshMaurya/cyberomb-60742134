@@ -37,7 +37,9 @@ const ArticleCard = ({
     return "tag-lifestyle";
   };
 
-  const visibleTags = (tags || []).filter(Boolean).slice(0, 3);
+  // Tags are intentionally not rendered on the frontend — they are kept in
+  // the data model / meta tags for SEO (article:tag, keywords) only.
+  void tags;
 
   return (
     <Link
