@@ -481,8 +481,10 @@ export default function AIArticleWriter() {
   };
 
   // Find placeholders (support both data-img-prompt and legacy data-img-query),
-  // generate one AI image per slot via Gemini, replace with a real <figure>
-  // tagged with data-inline-id so the user can later swap/remove it.
+  // generate one AI image per slot via Gemini, and — for any slot Gemini
+  // fails or times out on — fall back to a stock image via
+  // `fetch-article-image`, then finally to a deterministic Unsplash Source
+  // URL so an article never publishes with a broken/missing inline image.
   const injectInlineImages = async (forArticle: GeneratedArticle): Promise<GeneratedArticle> => {
     if (!forArticle.content) return forArticle;
     const slotRe = /<figure[^>]*data-img-slot=["']?(\d+)["']?[^>]*data-img-(?:prompt|query)=["']([^"']+)["'][^>]*>\s*<\/figure>/gi;
@@ -492,8 +494,21 @@ export default function AIArticleWriter() {
       slots.push({ full: m[0], slotNum: m[1], query: m[2] });
     }
     if (!slots.length) { setInlineImages([]); setImageLogs([]); return forArticle; }
+
+    // Ultimate fallback: Unsplash Source (no key required, always returns an
+    // image). Deterministic per slot so repeat runs stay stable.
+    const unsplashFallback = (q: string, seed: string) =>
+      `https://source.unsplash.com/1200x675/?${encodeURIComponent(
+        q.split(/[.,]/)[0].trim().split(/\s+/).slice(0, 4).join(',') || 'lifestyle'
+      )}&sig=${encodeURIComponent(seed)}`;
+
+    // Track final resolved images + provider per slot
+    const resolved: { url: string; credit: string; provider: 'gemini' | 'stock' | 'unsplash'; error?: string }[] =
+      slots.map(() => ({ url: '', credit: '', provider: 'gemini' }));
+
+    // 1) Gemini batch
     try {
-      const { data, error } = await supabase.functions.invoke('generate-article-image', {
+      const { data } = await supabase.functions.invoke('generate-article-image', {
         body: {
           prompts: slots.map((s) => s.query),
           topic: forArticle.title || topic,
@@ -502,43 +517,91 @@ export default function AIArticleWriter() {
         },
       });
       const images: { url?: string; prompt?: string; error?: string }[] = data?.images || [];
-      const logs: ImageFetchLog[] = slots.map((s, i) => ({
-        slot: i + 1,
-        baseQuery: s.query,
-        status: images[i]?.url ? 'ok' : 'failed',
-        picked: images[i]?.url,
-        attempts: [{
-          query: s.query,
-          provider: 'gemini',
-          candidates: images[i]?.url ? 1 : 0,
-          topScore: images[i]?.url ? 1 : 0,
-          picked: images[i]?.url,
-          error: images[i]?.error,
-        }],
-      }));
-      setImageLogs(logs);
-      if (error || !data?.ok) return forArticle;
-      let content = forArticle.content;
-      const entries: InlineImageEntry[] = [];
-      slots.forEach((slot, i) => {
-        const img = images[i];
-        const entry: InlineImageEntry = {
-          id: `inline-${slot.slotNum}`,
-          query: slot.query,
-          url: img?.url || '',
-          credit: img?.url ? 'AI-generated with Gemini' : '',
-          score: img?.url ? 1 : 0,
-          status: img?.url ? 'ok' : 'failed',
-        };
-        entries.push(entry);
-        content = content.replace(slot.full, renderInlineFigure(entry));
+      slots.forEach((_s, i) => {
+        if (images[i]?.url) {
+          resolved[i] = { url: images[i]!.url!, credit: 'AI-generated with Gemini', provider: 'gemini' };
+        } else if (images[i]?.error) {
+          resolved[i].error = images[i]!.error;
+        }
       });
-      setInlineImages(entries);
-      return { ...forArticle, content };
     } catch (e) {
-      console.warn('[injectInlineImages] failed', e);
-      return forArticle;
+      console.warn('[injectInlineImages] gemini batch failed', e);
     }
+
+    // 2) Stock fallback for any missing slots
+    const missing = slots
+      .map((s, i) => ({ s, i }))
+      .filter(({ i }) => !resolved[i].url);
+    if (missing.length) {
+      try {
+        const { data: stock } = await supabase.functions.invoke('fetch-article-image', {
+          body: {
+            topic: forArticle.title || topic,
+            keywords: (forArticle.tags || []).join(', ') || keywords,
+            queries: missing.map(({ s }) => s.query),
+            count: missing.length,
+          },
+        });
+        const stockImages: { url?: string; credit?: string }[] = stock?.images || [];
+        missing.forEach(({ i }, idx) => {
+          const si = stockImages[idx];
+          if (si?.url) {
+            resolved[i] = {
+              url: si.url,
+              credit: si.credit || 'Stock photo',
+              provider: 'stock',
+            };
+          }
+        });
+      } catch (e) {
+        console.warn('[injectInlineImages] stock fallback failed', e);
+      }
+    }
+
+    // 3) Unsplash Source as ultimate fallback
+    slots.forEach((s, i) => {
+      if (!resolved[i].url) {
+        resolved[i] = {
+          url: unsplashFallback(s.query, `${forArticle.slug || 'article'}-${s.slotNum}`),
+          credit: 'Photo via Unsplash',
+          provider: 'unsplash',
+        };
+      }
+    });
+
+    const logs: ImageFetchLog[] = slots.map((s, i) => ({
+      slot: i + 1,
+      baseQuery: s.query,
+      status: resolved[i].provider === 'gemini' ? 'ok' : 'fallback',
+      picked: resolved[i].url,
+      attempts: [{
+        query: s.query,
+        provider: resolved[i].provider,
+        candidates: 1,
+        topScore: 1,
+        picked: resolved[i].url,
+        error: resolved[i].error,
+      }],
+    }));
+    setImageLogs(logs);
+
+    let content = forArticle.content;
+    const entries: InlineImageEntry[] = [];
+    slots.forEach((slot, i) => {
+      const r = resolved[i];
+      const entry: InlineImageEntry = {
+        id: `inline-${slot.slotNum}`,
+        query: slot.query,
+        url: r.url,
+        credit: r.credit,
+        score: 1,
+        status: 'ok',
+      };
+      entries.push(entry);
+      content = content.replace(slot.full, renderInlineFigure(entry));
+    });
+    setInlineImages(entries);
+    return { ...forArticle, content };
   };
 
   // Swap or remove a specific inline image, updating both the registry and the
