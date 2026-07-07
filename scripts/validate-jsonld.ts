@@ -139,11 +139,66 @@ function validateFile(file: string) {
 const files = walk(ROOT);
 for (const f of files) validateFile(f);
 
+// -----------------------------------------------------------------------------
+// Extra check: every published BlogArticle route must wire article.tags into
+// (1) <meta name="keywords"> via SEOHead's `keywords` prop,
+// (2) <meta property="article:tag"> via SEOHead's `article={{ tags }}` prop, and
+// (3) Article JSON-LD via `buildArticleJsonLd({ tags })` so search engines
+//     receive the same taxonomy the DB stores. Missing any one of these fails
+//     the build so a regression can never ship silently.
+// -----------------------------------------------------------------------------
+const BLOG_ARTICLE_FILES = ["src/pages/BlogArticle.tsx"];
+for (const f of BLOG_ARTICLE_FILES) {
+  let src: string;
+  try { src = readFileSync(f, "utf8"); }
+  catch { issues.push({ file: f, type: "BlogArticle", problem: "file missing" }); continue; }
+
+  // 1) SEOHead `keywords` prop must derive from article.tags
+  const keywordsProp = /keywords=\{[\s\S]*?article\.tags[\s\S]*?\}/;
+  if (!keywordsProp.test(src)) {
+    issues.push({
+      file: f, type: "BlogArticle",
+      problem: "SEOHead `keywords` prop must include ...article.tags so <meta name=\"keywords\"> is emitted from stored tags",
+    });
+  }
+
+  // 2) SEOHead `article={{ ... tags: article.tags ... }}` prop
+  const articleTagsProp = /article=\{\{[\s\S]*?tags:\s*article\.tags[\s\S]*?\}\}/;
+  if (!articleTagsProp.test(src)) {
+    issues.push({
+      file: f, type: "BlogArticle",
+      problem: "SEOHead `article` prop must forward `tags: article.tags` so <meta property=\"article:tag\"> is emitted per tag",
+    });
+  }
+
+  // 3) buildArticleJsonLd(...) must pass tags: article.tags
+  const jsonLdTags = /buildArticleJsonLd\(\{[\s\S]*?tags:\s*article\.tags[\s\S]*?\}\)/;
+  if (!jsonLdTags.test(src)) {
+    issues.push({
+      file: f, type: "BlogArticle",
+      problem: "buildArticleJsonLd() call must pass `tags: article.tags` so Article JSON-LD carries the taxonomy",
+    });
+  }
+}
+
+// SEOHead helper contract: buildArticleJsonLd must accept and emit `tags`.
+{
+  const f = "src/components/SEOHead.tsx";
+  const src = readFileSync(f, "utf8");
+  if (!/tags\?:\s*string\[\]/.test(src)) {
+    issues.push({ file: f, type: "SEOHead", problem: "buildArticleJsonLd must declare `tags?: string[]` param" });
+  }
+  if (!/keywords:\s*cleanTags\.join/.test(src) && !/keywords:\s*.*tags.*join/.test(src)) {
+    issues.push({ file: f, type: "SEOHead", problem: "buildArticleJsonLd must emit `keywords` derived from tags" });
+  }
+}
+
 if (issues.length) {
-  console.error("\n❌ JSON-LD validation failed:\n");
+  console.error("\n❌ JSON-LD / SEO tag validation failed:\n");
   for (const i of issues) {
     console.error(`  ${i.file}\n    [${i.type}] ${i.problem}\n`);
   }
   process.exit(1);
 }
 console.log(`✓ JSON-LD validator: scanned ${files.length} files, ${issues.length} issues.`);
+
